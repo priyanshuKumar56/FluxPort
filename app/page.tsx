@@ -88,28 +88,28 @@ const LoadingSkeleton: React.FC = () => (
         <div className="animate-pulse">
           {/* Badge skeleton */}
           <div className="h-10 w-80 bg-gray-200 rounded-full mx-auto mb-8"></div>
-          
+
           {/* Title skeleton */}
           <div className="space-y-4 mb-8">
             <div className="h-16 bg-gray-200 rounded-lg mx-auto max-w-4xl"></div>
             <div className="h-16 bg-gray-200 rounded-lg mx-auto max-w-3xl"></div>
           </div>
-          
+
           {/* Description skeleton */}
           <div className="space-y-3 mb-10">
             <div className="h-6 bg-gray-200 rounded mx-auto max-w-4xl"></div>
             <div className="h-6 bg-gray-200 rounded mx-auto max-w-3xl"></div>
           </div>
-          
+
           {/* Typewriter skeleton */}
           <div className="h-16 bg-gray-200 rounded mx-auto max-w-md mb-12"></div>
-          
+
           {/* Buttons skeleton */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-16">
             <div className="h-16 w-64 bg-gray-200 rounded-lg"></div>
             <div className="h-16 w-48 bg-gray-200 rounded-lg"></div>
           </div>
-          
+
           {/* Trust indicators skeleton */}
           <div className="flex flex-wrap items-center justify-center gap-8 mb-12">
             {[1, 2, 3, 4].map((i) => (
@@ -175,7 +175,7 @@ const useAnimations = (isReady: boolean) => {
   // Lazy initialization of floating icons
   const floatingIconsData = useMemo(() => {
     if (!isReady || typeof window === 'undefined') return []
-    
+
     const icons = [Code, Database, Shield, Activity, Globe, Zap, Terminal, BarChart3]
     return Array.from({ length: 8 }, (_, i) => ({
       id: i,
@@ -191,7 +191,7 @@ const useAnimations = (isReady: boolean) => {
   // Lazy initialization of particles
   const particlesData = useMemo(() => {
     if (!isReady || typeof window === 'undefined') return []
-    
+
     return Array.from({ length: 20 }, (_, i) => ({
       id: i,
       x: Math.random() * window.innerWidth,
@@ -252,7 +252,7 @@ const useAnimations = (isReady: boolean) => {
     // Passive event listeners for better performance
     window.addEventListener("mousemove", handleMouseMove, { passive: true })
     window.addEventListener("scroll", handleScroll, { passive: true })
-    
+
     // Start animation after a small delay
     const animationTimeout = setTimeout(() => {
       animationFrameRef.current = requestAnimationFrame(animate)
@@ -322,19 +322,18 @@ const FloatingIcons: React.FC<{ floatingIcons: FloatingIcon[]; isVisible: boolea
 // Typewriter Component with loading state
 const TypewriterText: React.FC<{ text: string; isVisible: boolean }> = ({ text, isVisible }) => {
   const { displayedText, isTyping } = useTypewriter(text, 80, true)
-  
+
   if (!isVisible) {
     return <div className="h-16 flex items-center justify-center mb-12" />
   }
-  
+
   return (
     <div className="h-16 flex items-center justify-center mb-12">
       <div className="text-xl text-gray-700 font-mono">
         <span>{displayedText}</span>
         <span
-          className={`inline-block w-1.5 h-6 bg-orange-500 ml-1 transition-opacity duration-300 ${
-            isTyping ? "animate-pulse opacity-100" : "opacity-0"
-          }`}
+          className={`inline-block w-1.5 h-6 bg-orange-500 ml-1 transition-opacity duration-300 ${isTyping ? "animate-pulse opacity-100" : "opacity-0"
+            }`}
         />
       </div>
     </div>
@@ -347,7 +346,7 @@ const BackgroundMeshes: React.FC<{ scrollY: number; isVisible: boolean }> = Reac
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div 
+      <div
         className="absolute w-96 h-96 rounded-full opacity-20 animate-pulse"
         style={{
           background: 'radial-gradient(circle, rgba(249,115,22,0.3) 0%, rgba(239,68,68,0.1) 70%)',
@@ -357,7 +356,7 @@ const BackgroundMeshes: React.FC<{ scrollY: number; isVisible: boolean }> = Reac
           transform: `translateY(${scrollY * 0.1}px)`
         }}
       />
-      <div 
+      <div
         className="absolute w-80 h-80 rounded-full opacity-15 animate-pulse"
         style={{
           background: 'radial-gradient(circle, rgba(59,130,246,0.3) 0%, rgba(147,51,234,0.1) 70%)',
@@ -368,7 +367,7 @@ const BackgroundMeshes: React.FC<{ scrollY: number; isVisible: boolean }> = Reac
           transform: `translateY(${scrollY * 0.05}px)`
         }}
       />
-      <div 
+      <div
         className="absolute w-64 h-64 rounded-full opacity-10 animate-pulse"
         style={{
           background: 'radial-gradient(circle, rgba(16,185,129,0.3) 0%, rgba(6,182,212,0.1) 70%)',
@@ -425,7 +424,7 @@ export default function Page({ onGetStarted }: LandingPageProps) {
   useEffect(() => {
     // Stage 1: Show basic content immediately
     setIsVisible(true)
-    
+
     // Stage 2: Initialize animations after content is visible
     const readyTimeout = setTimeout(() => {
       setIsReady(true)
@@ -447,7 +446,7 @@ export default function Page({ onGetStarted }: LandingPageProps) {
     if (onGetStarted) onGetStarted()
 
     // Simulate delay (optional, remove in real use)
-    await new Promise((res) => setTimeout(res, 300))
+    // await new Promise((res) => setTimeout(res, 100))
 
     router.push("/dashboard")
   }
@@ -456,94 +455,53 @@ export default function Page({ onGetStarted }: LandingPageProps) {
   if (!isVisible) {
     return <LoadingSkeleton />
   }
- 
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-red-50 overflow-hidden relative">
-      <ParticleField particles={particles} isVisible={showAnimations} />
+      {/* <ParticleField particles={particles} isVisible={showAnimations} /> */}
       <FloatingIcons floatingIcons={floatingIcons} isVisible={showAnimations} />
       <BackgroundMeshes scrollY={scrollY} isVisible={showAnimations} />
       <Navigation onGetStarted={onGetStarted} />
-      
+
       {/* Hero Section */}
       <section ref={heroRef} className="relative z-40 container mx-auto px-6 pt-20 pb-32">
-        <div className="text-center mb-20">
-          <div
-            className={`transition-all duration-1000 ${
-              isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-            }`}
-          >
-            <Badge className="mb-8 bg-gradient-to-r from-orange-500 to-red-600 text-white border-0 px-6 py-3 text-sm hover:scale-105 transition-transform duration-300">
-              <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-              New: AI-Powered API Testing & Security Analysis
-            </Badge>
-            
-            <div className="relative">
-              <h1 className="text-7xl md:text-8xl font-black text-gray-900 mb-8 leading-tight">
-                The Future of
-                <span className="relative block">
-                  <span className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 bg-clip-text text-transparent animate-pulse">
-                    API Excellence
-                  </span>
-                  <div className="absolute -bottom-3.5 left-0 w-full h-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-full opacity-30 animate-pulse"></div>
-                </span>
-              </h1>
-              
-              {showAnimations && (
+
+
+        {/* Hero Section */}
+        <section className="container mx-auto px-6 py-16 text-center">
+          <h2 className="text-4xl sm:text-5xl font-bold mb-4">
+            Test APIs with Speed & Simplicity
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+            A lightweight, beginner-friendly platform for API testing and monitoring.
+            Perfect for developers who value clarity over clutter.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button
+              size="lg"
+              onClick={handleStart}
+              disabled={loading}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              {loading ? "Loading..." : (
                 <>
-                  <div className="absolute -top-10 -right-10 w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full opacity-20 animate-bounce"></div>
-                  <div className="absolute -bottom-5 -left-5 w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full opacity-15 animate-pulse"></div>
+                  Start Testing
+                  <ArrowRight className="ml-2 w-5 h-5" />
                 </>
               )}
-            </div>
-            
-            <p className="text-2xl text-gray-600 mb-10 max-w-4xl mx-auto leading-relaxed">
-              Professional API testing, monitoring, and management platform. 
-              <span className="text-orange-600 font-semibold"> Built for developers who demand speed, security, and simplicity.</span>
-            </p>
-
-            <TypewriterText text="Test APIs like a pro with our powerful testing suite" isVisible={isReady} />
-            
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-16">
-              <Button
-                size="lg"
-                onClick={handleStart}
-                disabled={loading}
-                className={`bg-gradient-to-r from-orange-500 to-red-600 text-white text-xl px-12 py-8 shadow-2xl transition-all duration-300 group ${
-                  loading ? "opacity-60 cursor-not-allowed" : "hover:scale-105 hover:shadow-3xl"
-                }`}
-              >
-                {loading ? (
-                  <>
-                    <span className="animate-spin mr-3 w-5 h-5 border-2 border-t-white border-b-white rounded-full" />
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    <Rocket className="mr-3 h-6 w-6 group-hover:animate-bounce" />
-                    Start Testing APIs
-                    <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
-                  </>
-                )}
-              </Button>
-              
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-2 border-orange-200 text-orange-600 hover:bg-orange-50 text-xl px-12 py-8 bg-white/80 backdrop-blur-sm hover:border-orange-300 transition-all duration-300 group"
-              >
-                <Play className="mr-3 h-6 w-6 group-hover:scale-110 transition-transform" />
-                Watch Demo
-              </Button>
-            </div>
-
-            <TrustIndicators isVisible={isReady} />
+            </Button>
+            <Button size="lg" variant="outline">
+              <Play className="mr-2 w-5 h-5" />
+              Watch Demo
+            </Button>
           </div>
-        </div>
+        </section>
 
         {/* API Dashboard Demo */}
         {isReady && <ApiGatewayDashboard />}
       </section>
-     
+
       {/* Other sections - wrapped in conditional rendering for better performance */}
       {isReady && (
         <>
@@ -551,13 +509,11 @@ export default function Page({ onGetStarted }: LandingPageProps) {
           <StatsSection />
           <WorksSection />
           <SecurityFeature />
-          <TestimonialSec />
-          <IntegrationsSection />
-          <PriceSection />
+
           <FooterSection />
         </>
       )}
-     
+
       <style jsx>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); }

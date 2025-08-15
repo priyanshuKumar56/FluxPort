@@ -1,101 +1,90 @@
-import { Badge, BarChart3, Code, LucideIcon, Play, Upload, Workflow } from 'lucide-react'
-import React from 'react'
-import { Card, CardContent } from '../ui/card'
+import React from "react"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
+import { Upload, Code, Play, BarChart3, Workflow } from "lucide-react"
 
 interface WorkflowStep {
   step: string
   title: string
   description: string
-  icon: LucideIcon
-  color: string
+  icon: React.ElementType
 }
+
 const WorksSection = () => {
-    const workflowSteps: WorkflowStep[] = [
+  const workflowSteps: WorkflowStep[] = [
     {
       step: "1",
       title: "Import APIs",
-      description: "Connect your APIs via OpenAPI spec, cURL, or manual entry",
-      icon: Upload,
-      color: "from-blue-500 to-cyan-500"
+      description: "Connect your APIs via OpenAPI spec, cURL, or manual entry.",
+      icon: Upload
     },
     {
       step: "2",
       title: "Create Tests",
-      description: "Build comprehensive test suites with our intuitive interface",
-      icon: Code,
-      color: "from-green-500 to-emerald-500"
+      description: "Build test suites easily with our interface.",
+      icon: Code
     },
     {
       step: "3",
       title: "Run & Monitor",
-      description: "Execute tests continuously and monitor performance 24/7",
-      icon: Play,
-      color: "from-orange-500 to-red-500"
+      description: "Execute tests continuously and monitor performance.",
+      icon: Play
     },
     {
       step: "4",
       title: "Analyze Results",
-      description: "Get detailed insights and AI-powered recommendations",
-      icon: BarChart3,
-      color: "from-purple-500 to-pink-500"
+      description: "Get insights and recommendations for improvement.",
+      icon: BarChart3
     }
   ]
-  return (
-    <section className="relative z-40 py-32 bg-gradient-to-br from-gray-50 to-blue-50">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-20">
-            <Badge className="mb-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white">
-              <Workflow className="w-4 h-4 mr-2" />
-              Simple Process
-            </Badge>
-            <h2 className="text-5xl font-bold text-gray-900 mb-6">
-              How it works
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Get started with our powerful API testing platform in just four simple steps
-            </p>
-          </div>
 
-          <div className="relative">
-            {/* Connecting Line */}
-            <div className="absolute top-16 left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-orange-500 to-red-500 opacity-20 hidden lg:block"></div>
-            
-            <div className="space-y-16">
-              {workflowSteps.map((step, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center gap-8 ${
-                    index % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'
-                  } flex-col`}
-                >
-                  <div className="flex-1">
-                    <Card className="bg-white/80 backdrop-blur-sm border-2 border-orange-100 hover:border-orange-200 hover:shadow-2xl transition-all duration-500 hover:scale-105 group">
-                      <CardContent className="p-8">
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-500`}>
-                            <step.icon className="w-8 h-8 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="text-2xl font-bold text-gray-900">{step.title}</h3>
-                            <p className="text-gray-600 text-lg">{step.description}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  
-                  <div className="relative">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-2xl text-white font-bold text-xl">
-                      {step.step}
-                    </div>
-                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full animate-pulse"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+  return (
+    <section className="py-16 bg-gray-50">
+      <div className="container mx-auto px-6">
+        {/* Section Header */}
+        <div className="text-center mb-12">
+          <Badge className="mb-4 bg-green-500 text-white">
+            <Workflow className="w-4 h-4 mr-2" />
+            Simple Process
+          </Badge>
+          <h2 className="text-3xl font-bold mb-4">How It Works</h2>
+          <p className="text-gray-600 max-w-2xl mx-auto text-sm">
+            Just four steps to start testing your APIs.
+          </p>
         </div>
-      </section>
+
+        {/* Steps */}
+        <div className="space-y-8">
+          {workflowSteps.map((step, index) => (
+            <div
+              key={index}
+              className={`flex items-start gap-4 ${index % 2 === 0 ? "flex-row" : "flex-row-reverse"
+                }`}
+            >
+              {/* Step Number */}
+              <div className="flex-shrink-0 flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold">
+                  {step.step}
+                </div>
+              </div>
+
+              {/* Step Card */}
+              <Card className="flex-1 border border-gray-200">
+                <CardContent className="p-4 flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-md bg-gray-100 flex items-center justify-center">
+                    <step.icon className="w-6 h-6 text-orange-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">{step.title}</h3>
+                    <p className="text-sm text-gray-600">{step.description}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   )
 }
 
