@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PostmanCollectionsSidebar } from "@/components/postman-collections-sidebar"
@@ -8,6 +8,7 @@ import { PostmanTabManager } from "@/components/postman-tab-manager"
 import { PostmanRequestBuilder } from "@/components/postman-request-builder"
 import { PostmanResponseViewer } from "@/components/postman-response-viewer"
 import { ResizablePanels } from "@/components/resizable-panels"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Search, Plus, Settings, User, Bell, Import } from "lucide-react"
 import { toast } from "sonner"
 import Image from "next/image"
@@ -49,6 +50,48 @@ export function PostmanMainDashboard() {
   const [activeTab, setActiveTab] = useState("tab-1")
   const [response, setResponse] = useState<ApiResponse | null>(null)
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Keep activeTab in URL to mimic VS Code-like routing state
+  useEffect(() => {
+    const urlTab = searchParams?.get("tab")
+    if (urlTab && tabs.find((t) => t.id === urlTab)) {
+      setActiveTab(urlTab)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    // Update URL without full navigation
+    if (typeof window === "undefined") return
+    const current = new URL(window.location.href)
+    current.searchParams.set("tab", activeTab)
+    window.history.replaceState({}, "", current.toString())
+  }, [activeTab])
+
+  const handleSidebarMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const sidebarEl = (e.currentTarget.previousElementSibling as HTMLDivElement) || null
+    const containerEl = e.currentTarget.parentElement as HTMLDivElement
+    if (!sidebarEl || !containerEl) return
+    const containerRect = containerEl.getBoundingClientRect()
+    const startMove = (moveEv: MouseEvent) => {
+      const pct = ((moveEv.clientX - containerRect.left) / containerRect.width) * 100
+      const clamped = Math.min(Math.max(pct, 12), 40)
+      sidebarEl.style.width = `${clamped}%`
+    }
+    const stopMove = () => {
+      document.removeEventListener("mousemove", startMove)
+      document.removeEventListener("mouseup", stopMove)
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
+    }
+    document.addEventListener("mousemove", startMove)
+    document.addEventListener("mouseup", stopMove)
+    document.body.style.cursor = "col-resize"
+    document.body.style.userSelect = "none"
+  }, [])
 
   const handleRequestSelect = useCallback(
     (request: any) => {
@@ -240,11 +283,16 @@ export function PostmanMainDashboard() {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Collections Sidebar */}
-        <PostmanCollectionsSidebar onRequestSelect={handleRequestSelect} />
+        {/* Sidebar/Main resizable split */}
+        <div className="flex h-full w-full">
+          <div className="flex-shrink-0 min-w-[180px]">
+            <PostmanCollectionsSidebar onRequestSelect={handleRequestSelect} />
+          </div>
+          {/* Vertical resizer between sidebar and content */}
+          <div className="w-1 bg-gray-200 hover:bg-gray-300 cursor-col-resize flex-shrink-0" onMouseDown={handleSidebarMouseDown} />
 
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col">
+          {/* Main Content Area */}
+          <div className="flex-1 min-w-0 flex flex-col">
           {/* Tab Manager */}
           <PostmanTabManager
             tabs={tabs}
@@ -277,6 +325,7 @@ export function PostmanMainDashboard() {
               minLeftWidth={30}
               maxLeftWidth={70}
             />
+          </div>
           </div>
         </div>
       </div>
