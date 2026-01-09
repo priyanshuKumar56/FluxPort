@@ -30,7 +30,7 @@ export default function SignUpPage() {
 
     try {
       await dispatch(registerUser({ email, password })).unwrap()
-      router.push("/auth/sign-up-success")
+      router.push("/dashboard")
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
     } finally {
