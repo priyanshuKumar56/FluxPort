@@ -1,42 +1,47 @@
-// "use client"
-import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-// import NextNProgress from 'nextjs-progressbar';
-import { ThemeProvider } from "@/components/theme-provider"
+import type { Metadata } from 'next'
+import { Geist, Geist_Mono } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
+import { ReduxProvider } from '@/components/providers/redux-provider'
+import './globals.css'
 
-import "./globals.css"
-import { Toaster } from "sonner"
-
-const inter = Inter({ subsets: ["latin"] })
+const _geist = Geist({ subsets: ["latin"] });
+const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Fluxport Dashboard",
-  description: "Smart Fluxport with advanced observability and token control",
+  title: 'FluxPort API Gateway',
+  description: 'Professional API Observability & Interception',
+  generator: 'v0.app',
   icons: {
-    icon: "/fp-logo.webp",
-    apple: "/apple-touch-icon.png",
-    shortcut: "/favicon-32x32.png",
+    icon: [
+      {
+        url: '/icon-light-32x32.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/icon-dark-32x32.png',
+        media: '(prefers-color-scheme: dark)',
+      },
+      {
+        url: '/icon.svg',
+        type: 'image/svg+xml',
+      },
+    ],
+    apple: '/apple-icon.png',
   },
-   
 }
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
-    <html lang="en">
-    
-      
-      <body className={inter.className}>
-      
-       
-
-        {children}
-         
-        <Toaster position="top-right" />
+    <html lang="en" suppressHydrationWarning>
+      <body className={`font-sans antialiased`}>
+        <ReduxProvider>
+          {children}
+        </ReduxProvider>
+        <Analytics />
       </body>
     </html>
   )
