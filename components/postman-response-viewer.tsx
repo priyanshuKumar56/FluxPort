@@ -19,6 +19,7 @@ interface ApiResponse {
   error?: boolean
   message?: string
   suggestions?: string[]
+  contentType?: string
 }
 
 interface PostmanResponseViewerProps {
@@ -155,9 +156,18 @@ export function PostmanResponseViewer({ response, loading }: PostmanResponseView
                 </div>
               </div>
               <ScrollArea className="flex-1">
-                <pre className="text-sm font-mono bg-gray-50 p-4 rounded-md overflow-auto">
-                  {formatJson(response.data)}
-                </pre>
+                {response.contentType && !response.contentType.includes("application/json") ? (
+                  <div className="space-y-2">
+                    <div className="text-xs text-gray-500">{response.contentType}</div>
+                    <pre className="text-sm font-mono bg-gray-50 p-4 rounded-md overflow-auto whitespace-pre-wrap break-words">
+                      {typeof response.data === "string" ? response.data : formatJson(response.data)}
+                    </pre>
+                  </div>
+                ) : (
+                  <pre className="text-sm font-mono bg-gray-50 p-4 rounded-md overflow-auto">
+                    {formatJson(response.data)}
+                  </pre>
+                )}
               </ScrollArea>
             </div>
           </TabsContent>

@@ -71,17 +71,39 @@ export async function POST(request: Request) {
       )
     }
 
-    // Handle localhost URLs - convert to 127.0.0.1 for better compatibility
-    if (targetUrl.includes("localhost")) {
-      targetUrl = targetUrl.replace(/localhost/g, "127.0.0.1")
-      console.log(`[PROXY] Converted localhost to 127.0.0.1: ${targetUrl}`)
-    }
-
     // Add protocol if missing
     if (!targetUrl.match(/^https?:\/\//)) {
       targetUrl = `http://${targetUrl}`
       console.log(`[PROXY] Added http protocol: ${targetUrl}`)
     }
+
+    // Build candidate localhost variants to maximize success across OS/network setups
+    const buildCandidates = (u: string): string[] => {
+      try {
+        const parsed = new URL(u)
+        const host = parsed.hostname
+        const isLocal = ["localhost", "127.0.0.1", "::1", "0.0.0.0"].includes(host)
+        if (!isLocal) return [u]
+
+        const variants = new Set<string>()
+        const hosts = ["localhost", "127.0.0.1", "::1", "0.0.0.0"]
+        const protocols = [parsed.protocol.replace(":", ""), "http", "https"].filter(Boolean) as string[]
+        const uniqueProtocols = Array.from(new Set(protocols))
+        for (const h of hosts) {
+          for (const proto of uniqueProtocols) {
+            const alt = new URL(parsed.toString())
+            alt.protocol = proto + ":"
+            alt.hostname = h
+            variants.add(alt.toString())
+          }
+        }
+        // Original first
+        return [u, ...Array.from(variants).filter((v) => v !== u)]
+      } catch {
+        return [u]
+      }
+    }
+    const candidates = buildCandidates(targetUrl)
 
     if (!url) {
       return new Response(
@@ -143,80 +165,92 @@ export async function POST(request: Request) {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
-    let response: Response
-    try {
-      response = await fetch(targetUrl, {
-        ...fetchOptions,
-        signal: controller.signal,
-      })
-    } catch (fetchError) {
-      clearTimeout(timeoutId)
-
-      let errorMessage = "Network error"
-      let statusCode = 0
-
-      if (fetchError instanceof Error) {
-        if (fetchError.name === "AbortError") {
-          errorMessage = "Request timeout (30s)"
-          statusCode = 408
-        } else if (fetchError.message.includes("Failed to fetch")) {
-          // This is the common CORS or network error
-          if (url.includes("localhost") || url.includes("127.0.0.1") || targetUrl.includes("127.0.0.1")) {
-            errorMessage = `Cannot connect to localhost server. Please check:
-    1. Is your server running on the correct port?
-    2. Is the endpoint path correct?
-    3. Try starting a simple server first`
-            statusCode = 503
-          } else {
-            errorMessage = "CORS error or network failure. The server may not allow cross-origin requests."
-            statusCode = 502
-          }
-        } else if (fetchError.message.includes("ECONNREFUSED")) {
-          errorMessage = "Connection refused - server may be down"
-          statusCode = 503
-        } else if (fetchError.message.includes("ENOTFOUND")) {
-          errorMessage = "Host not found - check the URL"
-          statusCode = 404
-        } else {
-          errorMessage = fetchError.message
-          statusCode = 500
-        }
+    let response: Response | null = null
+    let lastError: any = null
+    for (const candidate of candidates) {
+      try {
+        console.log(`[PROXY] Trying: ${candidate}`)
+        response = await fetch(candidate, {
+          ...fetchOptions,
+          signal: controller.signal,
+          redirect: "follow",
+        })
+        targetUrl = candidate
+        break
+      } catch (err) {
+        lastError = err
       }
+    }
+    if (!response) {
+      // Retry with alternate localhost hostname if applicable
+      try {
+        throw lastError || new Error("Fetch failed")
+      } catch (retryError) {
+        clearTimeout(timeoutId)
 
-      console.error(`[PROXY] Fetch error:`, errorMessage)
+        let errorMessage = "Network error"
+        let statusCode = 0
 
-      return new Response(
-        JSON.stringify({
-          error: true,
-          message: errorMessage,
-          status: statusCode,
-          statusText: "Network Error",
-          headers: {},
-          data: null,
-          suggestions:
-            url.includes("localhost") || url.includes("127.0.0.1") || targetUrl.includes("127.0.0.1")
-              ? [
-                  "Start your local server first (e.g., npm start, python -m http.server)",
-                  "Check if the port number is correct (common ports: 3000, 4000, 8000, 8080)",
-                  "Verify the API endpoint exists (try /api/health or /api/status)",
-                  "Make sure your server accepts HTTP requests",
-                  "Try the full URL: http://localhost:PORT/path",
-                ]
-              : [
-                  "Check if the URL is correct",
-                  "Verify the server allows CORS requests",
-                  "Try adding proper headers like 'Access-Control-Allow-Origin'",
-                  "Test the API directly in a new browser tab",
-                ],
-        }),
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
+        const err = retryError as any
+        if (err instanceof Error) {
+          if (err.name === "AbortError") {
+            errorMessage = "Request timeout (30s)"
+            statusCode = 408
+          } else if (err.message?.includes?.("Failed to fetch")) {
+            if (url.includes("localhost") || url.includes("127.0.0.1") || targetUrl.includes("127.0.0.1")) {
+              errorMessage = `Cannot connect to localhost server. Please check:\n  1. Is your server running on the correct port?\n  2. Is the endpoint path correct?\n  3. Try starting a simple server first`
+              statusCode = 503
+            } else {
+              errorMessage = "CORS error or network failure. The server may not allow cross-origin requests."
+              statusCode = 502
+            }
+          } else if (err.message?.includes?.("ECONNREFUSED")) {
+            errorMessage = "Connection refused - server may be down"
+            statusCode = 503
+          } else if (err.message?.includes?.("ENOTFOUND")) {
+            errorMessage = "Host not found - check the URL"
+            statusCode = 404
+          } else {
+            errorMessage = err.message
+            statusCode = 500
+          }
+        }
+
+        console.error(`[PROXY] Fetch error:`, errorMessage)
+
+        return new Response(
+          JSON.stringify({
+            error: true,
+            message: errorMessage,
+            status: statusCode,
+            statusText: "Network Error",
+            headers: {},
+            data: null,
+            suggestions:
+              url.includes("localhost") || url.includes("127.0.0.1") || targetUrl.includes("127.0.0.1")
+                ? [
+                    "Start your local server first (e.g., npm start, python -m http.server)",
+                    "Check if the port number is correct (common ports: 3000, 4000, 8000, 8080)",
+                    "Verify the API endpoint exists (try /api/health or /api/status)",
+                    "Make sure your server listens on 0.0.0.0 or 127.0.0.1 (not only ::1)",
+                    "Try both http://localhost:PORT and http://127.0.0.1:PORT",
+                  ]
+                : [
+                    "Check if the URL is correct",
+                    "Verify the server allows CORS requests",
+                    "Try adding proper headers like 'Access-Control-Allow-Origin'",
+                    "Test the API directly in a new browser tab",
+                  ],
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+              "Access-Control-Allow-Origin": "*",
+            },
           },
-        },
-      )
+        )
+      }
     }
 
     clearTimeout(timeoutId)
@@ -292,6 +326,7 @@ export async function POST(request: Request) {
         data: responseData,
         ok: response.ok,
         url: response.url.replace("127.0.0.1", "localhost"),
+        contentType,
       }),
       {
         status: 200,

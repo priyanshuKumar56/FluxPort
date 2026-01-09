@@ -34,6 +34,7 @@ interface ApiResponse {
   error?: boolean
   message?: string
   suggestions?: string[]
+  contentType?: string
 }
 
 export function PostmanMainDashboard() {
@@ -181,7 +182,7 @@ export function PostmanMainDashboard() {
       }
 
       // Calculate response size
-      const responseSize = new Blob([JSON.stringify(result.data || "")]).size
+      const responseSize = new Blob([typeof result.data === "string" ? result.data : JSON.stringify(result.data || "")]).size
 
       const apiResponse: ApiResponse = {
         status: result.status || 0,
@@ -194,6 +195,7 @@ export function PostmanMainDashboard() {
         error: result.error || false,
         message: result.message,
         suggestions: result.suggestions,
+        contentType: result.contentType || (result.headers && (result.headers["content-type"] || result.headers["Content-Type"])) || undefined,
       }
 
       setResponse(apiResponse)

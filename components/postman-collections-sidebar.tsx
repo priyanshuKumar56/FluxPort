@@ -374,7 +374,7 @@ export function PostmanCollectionsSidebar({ onRequestSelect }: PostmanCollection
   )
 
   return (
-    <div className="border-r border-gray-200 bg-white flex flex-col min-w-[180px] max-w-[520px] w-[280px]">
+    <div className="border-r border-gray-200 bg-white flex flex-col w-full">
       {/* Sidebar Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
