@@ -1,0 +1,27 @@
+services:
+  # Web Service
+  - type: web
+    name: fluxport-backend
+    env: node
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fluxport-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 3001
+
+databases:
+  # PostgreSQL Database
+  - name: fluxport-db
+    databaseName: fluxport
+    user: fluxport_user
+    plan: free
+    region: oregon
