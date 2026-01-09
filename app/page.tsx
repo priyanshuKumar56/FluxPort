@@ -12,6 +12,7 @@ import {
   Framer, Slack, Twitter, Linkedin,
   Zap
 } from 'lucide-react';
+import Link from "next/link";
 
 export default function IndexPage() {
   const [activeElements, setActiveElements] = useState<Set<number>>(new Set());
@@ -114,10 +115,10 @@ export default function IndexPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <a href="#" className="text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors hidden sm:block">Log In</a>
-            <a href="#" className="px-3.5 py-1.5 rounded-full bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 transition-all shadow-md hover:shadow-lg">
+            <Link href="/auth/login" className="text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors hidden sm:block">Log In</Link>
+            <Link href="/auth/sign-up" className="px-3.5 py-1.5 rounded-full bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 transition-all shadow-md hover:shadow-lg">
               Start Building
-            </a>
+            </Link>
           </div>
         </div>
       </nav>
