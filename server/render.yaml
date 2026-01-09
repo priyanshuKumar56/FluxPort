@@ -21,6 +21,7 @@ services:
         value: 3001
       - key: FRONTEND_URL
         value: https://flux-port.vercel.app
+        sync: false
 
 databases:
   # PostgreSQL Database
