@@ -1,11 +1,17 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Outfit, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ReduxProvider } from '@/components/providers/redux-provider'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-body",
+});
 
 export const metadata: Metadata = {
   title: 'FluxPort API Gateway',
@@ -19,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans antialiased`}>
+      <body className={`${outfit.variable} ${inter.variable} font-sans antialiased bg-background text-foreground`}>
         <ReduxProvider>
           {children}
         </ReduxProvider>
