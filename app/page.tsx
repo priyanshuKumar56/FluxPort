@@ -173,7 +173,7 @@ export default function IndexPage() {
                 Download App
               </button>
               <button className="px-6 py-3 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 hover:text-slate-900 transition-all hover:border-slate-300 flex items-center gap-2">
-                <Terminal className="w-4 h-4" /> npm install fluxport
+                <Terminal className="w-4 h-4" /> npm dev fluxport
               </button>
             </div>
           </div>
