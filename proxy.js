@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 export async function proxy(request) {
-  
+  // Proxy middleware - can be extended for authentication checks
   return NextResponse.next();
 }
 
