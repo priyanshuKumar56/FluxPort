@@ -33,13 +33,7 @@ const FooterSection = () => {
 
                 
                  
-                 <Button
-                   size="lg"
-                   variant="outline"
-                   className="border-2 border-white text-white hover:bg-white hover:text-orange-600 text-xl px-12 py-8 bg-transparent backdrop-blur-sm transition-all duration-300"
-                 >
-                   Schedule Demo
-                 </Button>
+                
                </div>
              </div>
            </div>
