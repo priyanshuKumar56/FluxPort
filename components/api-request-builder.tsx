@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { Play, ShieldCheck } from "lucide-react"
+import { ShieldCheck } from "lucide-react"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { useAppDispatch } from "@/lib/store/hooks"
 import { createLog } from "@/lib/store/slices/logsSlice"
@@ -50,7 +50,7 @@ export function ApiRequestBuilder({
   const [authData, setAuthData] = useState<any>(initialData?.authData || {})
   const [body, setBody] = useState(initialData?.body || "")
 
-  // Memoized update callback to avoid infinite loops
+  // Memoized update callback
   const triggerUpdate = useCallback(() => {
     onUpdate?.({ url, method, params, headers, body, authType, authData })
   }, [url, method, params, headers, body, authType, authData, onUpdate])
@@ -59,11 +59,24 @@ export function ApiRequestBuilder({
     triggerUpdate()
   }, [triggerUpdate])
 
-  // --- ADVANCED HELPERS ---
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "Enter") {
+        e.preventDefault()
+        handleSend()
+      }
+      if (e.ctrlKey && e.key === "s") {
+        e.preventDefault()
+        handleSave()
+      }
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [url, method, params, headers, body, authType, authData])
+
   const replaceVariables = useCallback((str: string) => {
     if (!str) return str
-    // For now, support a few built-in variables or just return as is if not found
-    // A full environment system would fetch from a Redux store here
     const vars: Record<string, string> = {
       baseUrl: "https://api.example.com",
       timestamp: Date.now().toString(),
@@ -117,9 +130,7 @@ export function ApiRequestBuilder({
         urlObj.hostname.startsWith("172.") ||
         urlObj.hostname.endsWith(".local")
 
-      // --- HYBRID SMART REQUESTER ---
       if (!useProxy || isLocalUrl) {
-        console.log(`[Smart Requester] Direct mode for: ${urlObj.hostname}`)
         const isNoBodyMethod = ["GET", "HEAD"].includes(method.toUpperCase())
         res = await fetch(urlObj.toString(), {
           method,
@@ -129,7 +140,6 @@ export function ApiRequestBuilder({
           body: !isNoBodyMethod ? replaceVariables(body) : undefined,
         })
       } else {
-        console.log(`[Smart Requester] Relay mode for: ${urlObj.hostname}`)
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
         const proxyHeaders: Record<string, string> = { "Content-Type": "application/json" }
         if (token) proxyHeaders['Authorization'] = `Bearer ${token}`
@@ -176,7 +186,6 @@ export function ApiRequestBuilder({
           data = res.statusText || "No response body"
         }
       } catch (bodyError) {
-        console.warn(`[API Client] Body read error:`, bodyError)
         bodyText = `Failed to read response: ${bodyError instanceof Error ? bodyError.message : String(bodyError)}`
         data = bodyText
       }
@@ -206,7 +215,6 @@ export function ApiRequestBuilder({
       }))
 
     } catch (err: any) {
-      console.error("API Request Error:", err)
       setResponse({
         error: err.message || "Network Error: Failed to fetch.",
         body: err.stack || String(err),
@@ -227,13 +235,13 @@ export function ApiRequestBuilder({
       return
     }
     const { urlObj, activeHeaders } = prepareRequest()
-    const collectionName = prompt("Enter collection name (or leave empty to use default):")
+    const collectionName = prompt("Enter collection name (or leave empty for default):")
     const requestName = prompt("Enter request name:", url.split('/').pop() || "New Request")
     if (!requestName) return
 
     try {
       const collections = await apiClient.getCollections()
-      let collection = collections.find(c => c.name === (collectionName || "Default"))
+      let collection = collections.find((c: any) => c.name === (collectionName || "Default"))
       if (!collection) collection = await apiClient.createCollection(collectionName || "Default")
 
       await apiClient.createSavedRequest({
@@ -269,7 +277,8 @@ export function ApiRequestBuilder({
   }
 
   return (
-    <ResizablePanelGroup direction="vertical">
+    <ResizablePanelGroup direction="horizontal">
+      {/* Left: Request builder */}
       <ResizablePanel defaultSize={50} minSize={30}>
         <div className="flex flex-col h-full bg-background">
           <RequestHeader
@@ -284,48 +293,56 @@ export function ApiRequestBuilder({
             handleSave={handleSave}
           />
 
-          <Tabs defaultValue="params" className="flex-1 flex flex-col p-0">
-            <div className="px-4 pt-1 border-b bg-muted/10">
-              <TabsList className="bg-transparent h-10 gap-2 p-0">
-                <TabsTrigger value="params" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent shadow-none px-4">
-                  Params <Badge variant="outline" className="ml-2 text-[10px] px-1">{params.filter((p) => p.key).length}</Badge>
+          <Tabs defaultValue="params" className="flex-1 flex flex-col">
+            <div className="px-3 border-b border-border bg-muted/10">
+              <TabsList className="bg-transparent h-9 gap-1 p-0">
+                <TabsTrigger value="params" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent shadow-none px-3 text-xs font-medium">
+                  Params
+                  <Badge variant="secondary" className="ml-1.5 text-[9px] h-4 px-1 bg-accent">
+                    {params.filter(p => p.key).length}
+                  </Badge>
                 </TabsTrigger>
-                <TabsTrigger value="auth" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent shadow-none px-4">
-                  Auth {authType !== "none" && <ShieldCheck className="ml-2 h-3 w-3 text-green-500" />}
-                </TabsTrigger>
-                <TabsTrigger value="headers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent shadow-none px-4">
-                  Headers <Badge variant="outline" className="ml-2 text-[10px] px-1">{headers.filter((h) => h.key).length}</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="body" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent shadow-none px-4">
+                <TabsTrigger value="body" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent shadow-none px-3 text-xs font-medium">
                   Body
                 </TabsTrigger>
-                <TabsTrigger value="tests" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent shadow-none px-4">
-                  Tests
+                <TabsTrigger value="headers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent shadow-none px-3 text-xs font-medium">
+                  Headers
+                  <Badge variant="secondary" className="ml-1.5 text-[9px] h-4 px-1 bg-accent">
+                    {headers.filter(h => h.key).length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="auth" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent shadow-none px-3 text-xs font-medium">
+                  Authorization
+                  {authType !== "none" && <ShieldCheck className="ml-1.5 h-3 w-3 text-emerald-400" />}
+                </TabsTrigger>
+                <TabsTrigger value="scripts" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent shadow-none px-3 text-xs font-medium">
+                  Scripts
                 </TabsTrigger>
               </TabsList>
             </div>
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-3">
               <TabsContent value="params" className="mt-0">
-                <KeyValueTable data={params} setter={setParams} placeholder={{ key: "Parameter", value: "Value" }} />
-              </TabsContent>
-              <TabsContent value="auth" className="mt-0">
-                <AuthSection authType={authType} setAuthType={setAuthType} authData={authData} setAuthData={setAuthData} />
-              </TabsContent>
-              <TabsContent value="headers" className="mt-0">
-                <KeyValueTable data={headers} setter={setHeaders} placeholder={{ key: "Header", value: "Value" }} />
+                <KeyValueTable data={params} setter={setParams} placeholder={{ key: "Key", value: "Value" }} />
               </TabsContent>
               <TabsContent value="body" className="mt-0">
                 <RequestBodyEditor body={body} setBody={setBody} />
               </TabsContent>
-              <TabsContent value="tests" className="mt-0">
-                <div className="space-y-4">
+              <TabsContent value="headers" className="mt-0">
+                <KeyValueTable data={headers} setter={setHeaders} placeholder={{ key: "Header", value: "Value" }} showType={false} />
+              </TabsContent>
+              <TabsContent value="auth" className="mt-0">
+                <AuthSection authType={authType} setAuthType={setAuthType} authData={authData} setAuthData={setAuthData} />
+              </TabsContent>
+              <TabsContent value="scripts" className="mt-0">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">Test Scripts</h3>
-                    <Badge variant="secondary" className="text-[10px] uppercase tracking-tighter">Preview Only</Badge>
+                    <h3 className="text-xs font-semibold">Test Scripts</h3>
+                    <Badge variant="secondary" className="text-[9px]">Coming soon</Badge>
                   </div>
                   <textarea
-                    className="w-full h-[150px] p-4 bg-muted/30 font-mono text-sm rounded-xl border border-border/50 focus:outline-none"
+                    className="w-full h-[150px] p-3 bg-muted/30 font-mono text-xs rounded-lg border border-border focus:outline-none focus:border-primary/50"
                     placeholder="pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                    spellCheck={false}
                   />
                 </div>
               </TabsContent>
@@ -333,7 +350,10 @@ export function ApiRequestBuilder({
           </Tabs>
         </div>
       </ResizablePanel>
-      <ResizableHandle withHandle className="bg-border/40 hover:bg-primary/50 transition-colors" />
+
+      <ResizableHandle className="w-[1px] bg-border hover:bg-primary/50 transition-colors" />
+
+      {/* Right: Response panel */}
       <ResizablePanel defaultSize={50} minSize={20}>
         <ResponsePanel
           response={response}

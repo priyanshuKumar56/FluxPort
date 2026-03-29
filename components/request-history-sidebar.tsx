@@ -2,10 +2,18 @@
 
 import { useState, useEffect } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, Clock, Folder, Plus, MoreVertical, Globe, ChevronRight, FileCode, FolderOpen } from "lucide-react"
+import {
+  Search, Clock, Folder, Plus, MoreVertical, Globe,
+  ChevronRight, FileCode, FolderOpen, List, Hash,
+  CheckCircle2, Settings2, FolderPlus, FilePlus, MoreHorizontal, Hexagon
+} from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks"
 import { fetchCollections } from "@/lib/store/slices/collectionsSlice"
@@ -38,16 +46,36 @@ interface RequestItem {
 
 interface RequestHistorySidebarProps {
   onRequestSelect?: (req: any) => void
+  onNewGraphql?: () => void
+  onNewHttp?: () => void
+  onOpenVariables?: () => void
+  onOpenEnvironment?: () => void
 }
 
-export function RequestHistorySidebar({ onRequestSelect }: RequestHistorySidebarProps) {
+export function RequestHistorySidebar({
+  onRequestSelect,
+  onNewGraphql,
+  onNewHttp,
+  onOpenVariables,
+  onOpenEnvironment,
+}: RequestHistorySidebarProps) {
   const dispatch = useAppDispatch()
   const { collections } = useAppSelector((state) => state.collections)
   const { logs } = useAppSelector((state) => state.logs)
   const [structuredCollections, setStructuredCollections] = useState<Collection[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedEnvironment, setSelectedEnvironment] = useState("staging")
+  const [activeSection, setActiveSection] = useState<"collections" | "history" | "environments">("collections")
+
+  // Dialog States
+  const [isAddRequestOpen, setIsAddRequestOpen] = useState(false)
+  const [addRequestTarget, setAddRequestTarget] = useState<{ collectionId: string, folderId?: string } | null>(null)
+  const [newRequestName, setNewRequestName] = useState("")
+  const [newRequestType, setNewRequestType] = useState("http")
+
+  const [isAddFolderOpen, setIsAddFolderOpen] = useState(false)
+  const [addFolderTarget, setAddFolderTarget] = useState<{ collectionId: string, parentFolderId?: string } | null>(null)
+  const [newFolderName, setNewFolderName] = useState("")
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,126 +84,128 @@ export function RequestHistorySidebar({ onRequestSelect }: RequestHistorySidebar
         await dispatch(fetchCollections())
         await dispatch(fetchLogs({ limit: 20 }))
       } catch (error) {
-        console.error('Failed to fetch data:', error)
+        console.error("Failed to fetch data:", error)
       } finally {
         setLoading(false)
       }
     }
-
     fetchData()
   }, [dispatch])
 
+  const structureData = async () => {
+    const structured = await Promise.all(
+      collections.map(async (col) => {
+        const folders = await apiClient.getFolders(col.id)
+        const reqs = await apiClient.getSavedRequests(col.id)
+        return {
+          ...col,
+          items: [
+            ...(folders?.map((f: any) => ({ ...f, type: "folder" })) || []),
+            ...(reqs?.map((r: any) => ({ ...r, type: "request" })) || []),
+          ],
+        }
+      })
+    )
+    setStructuredCollections(structured)
+    setLoading(false)
+  }
+
   useEffect(() => {
-    const structureData = async () => {
-      const structured = await Promise.all(
-        collections.map(async (col) => {
-          const folders = await apiClient.getFolders(col.id)
-          const reqs = await apiClient.getSavedRequests(col.id)
-
-          return {
-            ...col,
-            items: [
-              ...(folders?.map((f) => ({ ...f, type: "folder" })) || []),
-              ...(reqs?.map((r) => ({ ...r, type: "request" })) || []),
-            ],
-          }
-        }),
-      )
-      setStructuredCollections(structured)
-      setLoading(false)
-    }
-
     if (collections.length > 0) {
       structureData()
+    } else {
+      setStructuredCollections([])
+      setLoading(false)
     }
   }, [collections])
+
+  const refreshStructure = async () => {
+    if (collections.length > 0) {
+      await structureData();
+    }
+  }
+
+  const openAddRequestDialog = (e: React.MouseEvent, collectionId: string, folderId?: string) => {
+    e.stopPropagation()
+    setAddRequestTarget({ collectionId, folderId })
+    setNewRequestName("")
+    setNewRequestType("http")
+    setIsAddRequestOpen(true)
+  }
+
+  const openAddFolderDialog = (e: React.MouseEvent, collectionId: string, parentFolderId?: string) => {
+    e.stopPropagation()
+    setAddFolderTarget({ collectionId, parentFolderId })
+    setNewFolderName("")
+    setIsAddFolderOpen(true)
+  }
+
+  const submitCreateRequest = async () => {
+    if (!newRequestName || !addRequestTarget) return
+    try {
+      await apiClient.createSavedRequest({
+        name: newRequestName,
+        method: newRequestType === "graphql" ? "POST" : "GET",
+        url: "",
+        collectionId: addRequestTarget.collectionId,
+        folderId: addRequestTarget.folderId || null
+      })
+      setIsAddRequestOpen(false)
+      await refreshStructure()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const submitCreateFolder = async () => {
+    if (!newFolderName || !addFolderTarget) return
+    try {
+      await apiClient.createFolder(newFolderName, addFolderTarget.collectionId)
+      setIsAddFolderOpen(false)
+      await refreshStructure()
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
   const handleCreateCollection = async () => {
     const name = prompt("Enter collection name:")
     if (!name) return
-
     try {
       await apiClient.createCollection(name)
       await dispatch(fetchCollections())
-      // Refresh structured collections
-      const updatedCollections = await apiClient.getCollections()
-      const structured = await Promise.all(
-        updatedCollections.map(async (col) => {
-          const folders = await apiClient.getFolders(col.id)
-          const reqs = await apiClient.getSavedRequests(col.id)
-          return {
-            ...col,
-            items: [
-              ...(folders?.map((f) => ({ ...f, type: "folder" })) || []),
-              ...(reqs?.map((r) => ({ ...r, type: "request" })) || []),
-            ],
-          }
-        }),
-      )
-      setStructuredCollections(structured)
     } catch (error) {
-      console.error('Failed to create collection:', error)
-    }
-  }
-
-  const handleCreateFolder = async (collectionId: string) => {
-    const name = prompt("Enter folder name:")
-    if (!name) return
-
-    try {
-      await apiClient.createFolder(name, collectionId)
-      await dispatch(fetchCollections())
-      // Refresh structured collections
-      const updatedCollections = await apiClient.getCollections()
-      const structured = await Promise.all(
-        updatedCollections.map(async (col) => {
-          const folders = await apiClient.getFolders(col.id)
-          const reqs = await apiClient.getSavedRequests(col.id)
-          return {
-            ...col,
-            items: [
-              ...(folders?.map((f) => ({ ...f, type: "folder" })) || []),
-              ...(reqs?.map((r) => ({ ...r, type: "request" })) || []),
-            ],
-          }
-        }),
-      )
-      setStructuredCollections(structured)
-    } catch (error) {
-      console.error('Failed to create folder:', error)
+      console.error("Failed to create collection:", error)
     }
   }
 
   const getMethodColor = (method: string) => {
-    switch (method) {
-      case "GET":
-        return "text-green-500"
-      case "POST":
-        return "text-yellow-500"
-      case "PUT":
-        return "text-blue-500"
-      case "DELETE":
-        return "text-red-500"
-      case "PATCH":
-        return "text-purple-500"
-      default:
-        return "text-gray-500"
+    const colors: Record<string, string> = {
+      GET: "text-emerald-400 bg-emerald-400/10",
+      POST: "text-amber-400 bg-amber-400/10",
+      PUT: "text-blue-400 bg-blue-400/10",
+      DELETE: "text-red-400 bg-red-400/10",
+      PATCH: "text-violet-400 bg-violet-400/10",
     }
+    return colors[method] || "text-muted-foreground bg-muted"
   }
 
-  // Recursive component to render nested folders
   const FolderTreeItem = ({ item, level = 0 }: { item: FolderItem | RequestItem; level?: number }) => {
     const [isOpen, setIsOpen] = useState(false)
 
     if (item.type === "request") {
       return (
         <div
-          className="flex items-center gap-2 p-2 pl-4 rounded-md hover:bg-accent cursor-pointer transition-colors group"
-          style={{ paddingLeft: `${level * 16 + 8}px` }}
+          className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-accent cursor-pointer transition-colors group"
+          style={{ paddingLeft: `${level * 12 + 8}px` }}
+          onClick={() => onRequestSelect?.(item)}
         >
-          <FileCode className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <span className={`text-[10px] font-bold w-12 ${getMethodColor(item.method || "GET")}`}>{item.method}</span>
-          <span className="text-xs truncate flex-1">{item.name}</span>
+          <span className={cn("text-[9px] font-bold px-1 py-0.5 rounded", getMethodColor((item as RequestItem).method || "GET"))}>
+            {(item as RequestItem).method || "GET"}
+          </span>
+          <span className="text-[11px] truncate flex-1 text-foreground/80 group-hover:text-foreground">
+            {item.name}
+          </span>
         </div>
       )
     }
@@ -183,25 +213,39 @@ export function RequestHistorySidebar({ onRequestSelect }: RequestHistorySidebar
     return (
       <div style={{ paddingLeft: `${level * 8}px` }}>
         <div
-          className="flex items-center gap-2 p-2 rounded-md hover:bg-accent cursor-pointer transition-colors group"
+          className="flex items-center gap-1.5 py-1.5 px-2 rounded hover:bg-accent cursor-pointer transition-colors group"
           onClick={() => setIsOpen(!isOpen)}
         >
-          <ChevronRight
-            className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`}
-          />
+          <ChevronRight className={cn("h-3 w-3 text-muted-foreground transition-transform shrink-0", isOpen && "rotate-90")} />
           {isOpen ? (
-            <FolderOpen className="h-3.5 w-3.5 text-primary" />
+            <FolderOpen className="h-3.5 w-3.5 text-primary/70 shrink-0" />
           ) : (
-            <Folder className="h-3.5 w-3.5 text-muted-foreground" />
+            <Folder className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           )}
-          <span className="text-xs font-medium flex-1">{item.name}</span>
-          <Badge variant="outline" className="text-[9px] px-1 h-4">
-            {item.children?.length || 0}
-          </Badge>
+          <span className="text-[11px] font-medium flex-1 truncate">{item.name}</span>
+          
+          {/* Folder actions */}
+          <div className="opacity-0 group-hover:opacity-100 flex items-center pr-1 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div role="button" tabIndex={0} className="h-5 w-5 rounded hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground outline-none cursor-pointer">
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[140px] text-[11px] border-border bg-card shadow-xl p-1">
+                <DropdownMenuItem onClick={(e) => openAddRequestDialog(e as any, (item as any).collectionId, item.id)} className="text-[11px] cursor-pointer py-1.5 px-2 flex items-center gap-2 hover:bg-accent focus:bg-accent rounded">
+                  <FilePlus className="h-3.5 w-3.5 opacity-70" /> Add request
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => openAddFolderDialog(e as any, (item as any).collectionId, item.id)} className="text-[11px] cursor-pointer py-1.5 px-2 flex items-center gap-2 hover:bg-accent focus:bg-accent rounded">
+                  <FolderPlus className="h-3.5 w-3.5 opacity-70" /> Add folder
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-        {isOpen && item.children && (
-          <div className="mt-1 space-y-0.5">
-            {item.children.map((child) => (
+        {isOpen && (item as FolderItem).children && (
+          <div className="mt-0.5 space-y-0.5">
+            {(item as FolderItem).children!.map((child) => (
               <FolderTreeItem key={child.id} item={child} level={level + 1} />
             ))}
           </div>
@@ -211,163 +255,231 @@ export function RequestHistorySidebar({ onRequestSelect }: RequestHistorySidebar
   }
 
   return (
-    <div className="flex flex-col h-full bg-card/20 backdrop-blur-xl border-r border-border/50">
-      <div className="p-5 space-y-5 border-b border-border/50 bg-muted/10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-primary/10">
-              <Globe className="h-4 w-4 text-primary" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 leading-none mb-1">Environment</span>
-              <span className="text-xs font-bold text-foreground tracking-tight uppercase">{selectedEnvironment}</span>
-            </div>
-          </div>
-          <div className="flex gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 transition-colors">
-              <Plus className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 transition-colors">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </div>
+    <div className="flex flex-col h-full bg-background">
+      {/* Top toolbar */}
+      <div className="flex items-center justify-between px-2 py-1.5 border-b border-border">
+        <div className="flex items-center gap-0.5">
+          <button className="w-7 h-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
+            <List className="w-3.5 h-3.5" />
+          </button>
+          <button className="w-7 h-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
+            <Hash className="w-3.5 h-3.5" />
+          </button>
         </div>
-
-        <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 group-focus-within:text-primary transition-colors" />
+        <div className="relative flex-1 mx-1">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
           <Input
-            placeholder="Search collections..."
-            className="pl-9 h-10 text-xs bg-background/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all rounded-xl"
+            placeholder="Search"
+            className="pl-7 h-7 text-[11px] bg-accent/30 border-transparent focus:border-primary/30"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        <button
+          onClick={handleCreateCollection}
+          className="w-7 h-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
       </div>
 
-      <ScrollArea className="flex-1 px-2 py-4">
-        <div className="space-y-8">
-          <div>
-            <div className="flex items-center justify-between px-3 mb-4">
-              <div className="flex items-center gap-2">
-                <Folder className="h-4 w-4 text-primary/60" />
-                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80">Collections</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 hover:bg-primary/10 rounded-lg transition-all"
-                onClick={handleCreateCollection}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
+      <ScrollArea className="flex-1">
+        <div className="py-1">
+          {/* Collections section */}
+          {loading ? (
+            <div className="px-4 py-8 flex flex-col items-center justify-center gap-2 text-muted-foreground/40">
+              <div className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <span className="text-[10px] font-medium">Loading...</span>
             </div>
-
-            {loading ? (
-              <div className="px-4 py-8 flex flex-col items-center justify-center gap-3 text-muted-foreground/40 italic">
-                <div className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                <span className="text-[10px] font-medium tracking-wider uppercase">Loading Workspace...</span>
-              </div>
-            ) : (
-              <Accordion type="multiple" className="space-y-1.5">
-                {structuredCollections.map((collection) => (
-                  <AccordionItem key={collection.id} value={collection.id} className="border-none px-1">
-                    <div className="flex items-center group pr-1 rounded-xl transition-all hover:bg-primary/5">
-                      <AccordionTrigger className="py-2.5 px-3 hover:no-underline text-xs font-bold flex-1 transition-all">
-                        <div className="flex items-center gap-3">
-                          <div className="p-1 rounded-md bg-primary/5 text-primary">
-                            <Folder className="h-3.5 w-3.5 fill-current" />
+          ) : (
+            <div>
+              {structuredCollections.map((collection) => (
+                <Accordion key={collection.id} type="multiple" className="border-none relative group/root">
+                  <AccordionItem value={collection.id} className="border-none relative">
+                    <AccordionTrigger className="py-1.5 px-2 hover:no-underline hover:bg-accent/30 text-[11px] font-semibold flex items-center pr-8 [&>svg]:hidden">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform duration-200 group-data-[state=open]/root:rotate-90" />
+                        <span className="truncate flex-1 text-left">{collection.name}</span>
+                      </div>
+                    </AccordionTrigger>
+                    {/* Positioned OUTSIDE AccordionTrigger to prevent nested button hydration errors */}
+                    <div className="absolute top-1 right-2 opacity-0 group-hover/root:opacity-100 flex items-center transition-opacity z-10" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <div role="button" tabIndex={0} className="h-5 w-5 rounded hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground outline-none cursor-pointer">
+                            <Plus className="h-3.5 w-3.5" />
                           </div>
-                          <span className="truncate max-w-[120px]">{collection.name}</span>
-                        </div>
-                      </AccordionTrigger>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 opacity-0 group-hover:opacity-100 hover:bg-primary/10 rounded-lg transition-all"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleCreateFolder(collection.id)
-                        }}
-                      >
-                        <Plus className="h-3.5 w-3.5 text-primary" />
-                      </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[140px] text-[11px] border-border bg-card shadow-xl p-1">
+                          <DropdownMenuItem onClick={(e) => openAddRequestDialog(e as any, collection.id)} className="text-[11px] cursor-pointer py-1.5 px-2 flex items-center gap-2 hover:bg-accent focus:bg-accent rounded">
+                            <FilePlus className="h-3.5 w-3.5 opacity-70" /> Add request
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => openAddFolderDialog(e as any, collection.id)} className="text-[11px] cursor-pointer py-1.5 px-2 flex items-center gap-2 hover:bg-accent focus:bg-accent rounded">
+                            <FolderPlus className="h-3.5 w-3.5 opacity-70" /> Add folder
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <AccordionContent className="pb-2 pt-1">
-                      <div className="space-y-1 ml-2 border-l-2 border-primary/10 pl-2 mt-1">
+                    
+                    <AccordionContent className="pb-1 pt-0">
+                      <div className="ml-2 pl-2 border-l border-border/50">
                         {collection.items?.length ? (
                           collection.items.map((item) => (
                             <FolderTreeItem key={item.id} item={item} />
                           ))
                         ) : (
-                          <div className="py-2 pl-4 text-[10px] text-muted-foreground/40 font-medium uppercase tracking-tighter">Empty folder</div>
+                          <div className="py-2 pl-4 text-[10px] text-muted-foreground/40 italic">Empty collection</div>
                         )}
                       </div>
                     </AccordionContent>
                   </AccordionItem>
-                ))}
-              </Accordion>
-            )}
+                </Accordion>
+              ))}
+
+              {/* Untitled request */}
+              <div
+                className="flex items-center gap-2 py-1.5 px-3 rounded mx-1 hover:bg-accent cursor-pointer transition-colors"
+                onClick={() => onNewHttp?.()}
+              >
+                <span className={cn("text-[9px] font-bold px-1 py-0.5 rounded", getMethodColor("GET"))}>GET</span>
+                <span className="text-[11px] text-foreground/80">Untitled request</span>
+              </div>
+            </div>
+          )}
+
+          {/* Environments section */}
+          <div className="mt-4 border-t border-border pt-2">
+            <div
+              className="flex items-center gap-2 py-1.5 px-3 hover:bg-accent cursor-pointer transition-colors rounded mx-1"
+              onClick={onOpenEnvironment}
+            >
+              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-[11px] font-medium flex-1">Global Environment</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <div
+              className="flex items-center gap-2 py-1.5 px-3 hover:bg-accent cursor-pointer transition-colors rounded mx-1"
+              onClick={onOpenEnvironment}
+            >
+              <Settings2 className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="text-[11px] font-medium flex-1">New Environment</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
           </div>
 
-          <div>
-            <div className="flex items-center gap-2 px-3 mb-4">
-              <div className="p-1 rounded-md bg-secondary/10">
-                <Clock className="h-4 w-4 text-secondary" />
-              </div>
-              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80">Request History</span>
+          {/* History section */}
+          <div className="mt-4 border-t border-border pt-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 mb-1">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground/60" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">History</span>
             </div>
-
-            <div className="space-y-1 px-1">
-              {logs.length === 0 ? (
-                <div className="px-4 py-8 flex flex-col items-center justify-center gap-2 text-muted-foreground/30 border-2 border-dashed rounded-2xl">
-                  <Clock className="h-8 w-8 opacity-10" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">No Sessions</span>
-                </div>
-              ) : (
-                logs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="flex justify-between items-center gap-3 px-3 py-3 rounded-xl hover:bg-primary/5 border border-transparent hover:border-primary/10 cursor-pointer transition-all animate-in fade-in slide-in-from-left-2 group"
-                    onClick={() => onRequestSelect?.({
-                      name: log.requestUrl.split('/').pop() || 'Request',
+            {logs.length === 0 ? (
+              <div className="px-4 py-4 text-center text-[10px] text-muted-foreground/40 italic">
+                No request history
+              </div>
+            ) : (
+              logs.slice(0, 15).map((log) => (
+                <div
+                  key={log.id}
+                  className="flex items-center gap-2 py-1.5 px-3 hover:bg-accent cursor-pointer transition-colors rounded mx-1 group"
+                  onClick={() =>
+                    onRequestSelect?.({
+                      name: log.requestUrl.split("/").pop() || "Request",
                       method: log.requestMethod,
                       url: log.requestUrl,
-                    })}
+                    })
+                  }
+                >
+                  <span className={cn("text-[9px] font-bold px-1 py-0.5 rounded shrink-0", getMethodColor(log.requestMethod))}>
+                    {log.requestMethod}
+                  </span>
+                  <span className="text-[11px] truncate flex-1 text-foreground/70 group-hover:text-foreground">
+                    {log.requestUrl.split("/").pop() || "Request"}
+                  </span>
+                  <Badge
+                    variant={log.responseStatus < 400 ? "default" : "destructive"}
+                    className={cn(
+                      "text-[8px] font-bold h-4 px-1 rounded",
+                      log.responseStatus < 400
+                        ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/20"
+                        : "bg-red-500/15 text-red-400 hover:bg-red-500/20"
+                    )}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={cn(
-                        "w-12 h-6 flex items-center justify-center rounded-lg text-[9px] font-black uppercase tracking-tighter shadow-sm",
-                        log.requestMethod === "GET" ? "bg-green-500/10 text-green-500" :
-                          log.requestMethod === "POST" ? "bg-yellow-500/10 text-yellow-500" :
-                            log.requestMethod === "PUT" ? "bg-blue-500/10 text-blue-500" :
-                              log.requestMethod === "DELETE" ? "bg-red-500/10 text-red-500" :
-                                "bg-muted text-muted-foreground"
-                      )}>
-                        {log.requestMethod}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[12px] truncate font-bold text-foreground/90 group-hover:text-primary transition-colors">
-                          {log.requestUrl.split('/').pop() || 'Untitled Request'}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground/60 truncate font-mono tracking-tighter">{log.requestUrl}</div>
-                      </div>
-                    </div>
-                    <Badge
-                      variant={log.responseStatus < 400 ? "default" : "destructive"}
-                      className={cn(
-                        "text-[9px] font-black h-5 px-1.5 rounded-md shadow-sm opacity-80 group-hover:opacity-100 transition-opacity",
-                        log.responseStatus < 400 ? "bg-green-500/20 text-green-500 hover:bg-green-500/30" : "bg-red-500/20 text-red-500 hover:bg-red-500/30"
-                      )}
-                    >
-                      {log.responseStatus}
-                    </Badge>
-                  </div>
-                ))
-              )}
-            </div>
+                    {log.responseStatus}
+                  </Badge>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </ScrollArea>
+      {/* DIALOGS FOR CREATION */}
+      <Dialog open={isAddRequestOpen} onOpenChange={setIsAddRequestOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Request</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="req-name">Request Name</Label>
+              <Input
+                id="req-name"
+                value={newRequestName}
+                onChange={(e) => setNewRequestName(e.target.value)}
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && submitCreateRequest()}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Request Type</Label>
+              <Select value={newRequestType} onValueChange={setNewRequestType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="http">
+                    <div className="flex items-center gap-2"><FileCode className="w-4 h-4 text-emerald-500" /> HTTP Request</div>
+                  </SelectItem>
+                  <SelectItem value="graphql">
+                    <div className="flex items-center gap-2"><Hexagon className="w-4 h-4 text-pink-500" /> GraphQL Request</div>
+                  </SelectItem>
+                  <SelectItem value="environment">
+                    <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-blue-500" /> Environment</div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddRequestOpen(false)}>Cancel</Button>
+            <Button onClick={submitCreateRequest}>Create Request</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddFolderOpen} onOpenChange={setIsAddFolderOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Folder</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="folder-name">Folder Name</Label>
+              <Input
+                id="folder-name"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && submitCreateFolder()}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddFolderOpen(false)}>Cancel</Button>
+            <Button onClick={submitCreateFolder}>Create Folder</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

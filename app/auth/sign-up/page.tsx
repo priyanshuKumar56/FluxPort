@@ -42,11 +42,13 @@ export default function SignUpPage() {
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10 bg-background">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex items-center gap-2 font-bold text-2xl text-primary">
-            <Zap className="h-8 w-8 fill-current" />
-            <span>API Gateway</span>
-          </div>
-          <p className="text-muted-foreground text-sm">Professional API Observability & Interception</p>
+          <Link href="/" className="flex items-center gap-3 font-bold text-3xl text-white mb-2 group">
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(99,102,241,0.4)] group-hover:rotate-3 transition-transform">
+              <img src="/logo.png" alt="FluxPort Logo" className="w-full h-full object-cover" />
+            </div>
+            <span>FluxPort</span>
+          </Link>
+          <p className="text-muted-foreground text-sm max-w-[280px]">Join the next generation of API observability.</p>
         </div>
         <Card className="border-border/50 bg-card/50 backdrop-blur-xl">
           <CardHeader>

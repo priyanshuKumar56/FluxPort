@@ -7,69 +7,116 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { UserPlus, MoreHorizontal, Shield, User } from "lucide-react"
 import { useAppSelector } from "@/lib/store/hooks"
+import { InviteMemberModal } from "@/components/invite-member-modal"
 
 export function RbacManager({ organizationId }: { organizationId: string }) {
   const { user } = useAppSelector((state) => state.auth)
-  const [members] = useState<any[]>(user ? [user] : [])
+  const { members, activeWorkspaceId } = useAppSelector((state) => state.workspaces)
+  const [isInviteOpen, setIsInviteOpen] = useState(false)
+  const [inviteLink, setInviteLink] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const handleCreateLink = () => {
+    const link = `http://localhost:3000/invite/${activeWorkspaceId}-${Math.random().toString(36).substr(2, 6)}`
+    setInviteLink(link)
+  }
+
+  const handleCopyLink = () => {
+    if (inviteLink) {
+      navigator.clipboard.writeText(inviteLink)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+  
+  // Mix original user with invited members for display
+  const displayMembers = [...(user ? [user] : []), ...members]
   const loading = false
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button className="gap-2">
-          <UserPlus className="h-4 w-4" /> Invite Member
-        </Button>
+    <div className="space-y-8 mt-2 max-w-5xl text-foreground">
+      <InviteMemberModal open={isInviteOpen} onOpenChange={setIsInviteOpen} />
+
+      {/* Public Invite link */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-lg font-semibold text-white tracking-tight">Public Invite link</h2>
+          {!inviteLink ? (
+            <Button onClick={handleCreateLink} className="bg-[#1a56db] hover:bg-[#1a56db]/90 text-white rounded font-medium h-8 px-4 text-xs">
+              Create Link
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="px-3 py-1.5 bg-[#222] border border-white/10 rounded text-xs font-mono text-emerald-400 select-all">
+                {inviteLink}
+              </div>
+              <Button onClick={handleCopyLink} variant="outline" className="border-white/10 text-white rounded font-medium h-8 px-4 text-xs bg-transparent hover:bg-white/10 transition-colors">
+                {copied ? "Copied!" : "Copy Link"}
+              </Button>
+            </div>
+          )}
+        </div>
+        <p className="text-sm text-foreground/50">
+          Share this secret link to invite people to this workspace. Only users who can invite members can see this.
+        </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Team Members</CardTitle>
-          <CardDescription>Manage who has access to this project and their permissions.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="h-px w-full bg-white/10" />
+
+      {/* Workspace Members */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white tracking-tight">Workspace Members</h2>
+          <Button onClick={() => setIsInviteOpen(true)} className="bg-[#1a56db] hover:bg-[#1a56db]/90 text-white rounded font-medium h-8 px-4 text-xs gap-1">
+            <UserPlus className="h-3.5 w-3.5" /> Invite People
+          </Button>
+        </div>
+
+        <div className="border border-white/5 rounded-lg bg-[#222222]/80 overflow-hidden shadow-sm">
           <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead>User</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+            <TableHeader className="border-b border-white/10">
+              <TableRow className="hover:bg-transparent border-none">
+                <TableHead className="text-xs font-semibold text-foreground/50 h-10 w-2/3">User</TableHead>
+                <TableHead className="text-xs font-semibold text-foreground/50 h-10 w-1/3">Role</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {members.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>
+              {displayMembers.map((member) => {
+                const m = member as any;
+                const displayName = m.full_name || m.name || m.email.split("@")[0];
+                const displayRole = m.role ? m.role.charAt(0).toUpperCase() + m.role.slice(1) : "Admin";
+                return (
+                <TableRow key={m.id} className="border-b border-white/5 hover:bg-white/5 transition-colors border-none group">
+                  <TableCell className="py-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center border">
-                        <User className="h-4 w-4 text-primary" />
+                      <div className="h-10 w-10 rounded bg-white/20 flex flex-col items-center justify-end overflow-hidden pb-0 border border-white/10">
+                        {/* Fake user silhouette */}
+                        <div className="w-4 h-4 rounded-full bg-white/70 mb-0.5" />
+                        <div className="w-8 h-4 rounded-t-full bg-white/70 translate-y-1" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-medium text-sm">{member.full_name || member.email.split("@")[0]}</span>
-                        <span className="text-xs text-muted-foreground">{member.email}</span>
+                        <span className="font-semibold text-sm text-white">{displayName} {m.id === user?.id && <span className="text-foreground/60 font-normal">(You)</span>}</span>
+                        <span className="text-xs text-foreground/50">{m.email}</span>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="gap-1.5 font-normal">
-                      <Shield className="h-3 w-3" />
-                      {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {new Date(member.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon-sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                  <TableCell className="py-4">
+                    <span className="text-sm font-medium text-white">
+                      {displayRole}
+                    </span>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+        
+        {displayMembers.length === 1 && (
+          <p className="text-center text-sm font-medium text-foreground/70 mt-6 pt-2">
+            You are the only member in this workspace, add more members to collaborate.
+          </p>
+        )}
+      </div>
     </div>
   )
 }
