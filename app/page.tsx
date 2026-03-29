@@ -751,7 +751,7 @@ export default function FluxPortPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <a href="https://github.com" target="_blank" rel="noreferrer"
+            <a href="https://github.com/priyanshuKumar56/FluxPort" target="_blank" rel="noreferrer"
               className="hidden sm:flex items-center gap-2 text-[13px] text-white/35 hover:text-white transition-colors">
               <Github className="w-4 h-4" /><span>Source</span>
             </a>
@@ -801,7 +801,7 @@ export default function FluxPortPage() {
               <MagneticBtn href="/auth/sign-up" variant="primary" className="text-[14px] px-9 py-4">
                 <Rocket className="w-4 h-4" /> Launch FluxPort <ArrowRight className="w-4 h-4" />
               </MagneticBtn>
-              <MagneticBtn href="https://github.com" variant="outline" className="text-[14px] px-9 py-4">
+              <MagneticBtn href="https://github.com/priyanshuKumar56/FluxPort" variant="outline" className="text-[14px] px-9 py-4">
                 <Github className="w-4 h-4" /> View Source
               </MagneticBtn>
             </div>
