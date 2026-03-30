@@ -39,7 +39,7 @@ export default function SettingsPage() {
         try {
           await Promise.all([
             dispatch(fetchLogs({ limit: 1000, workspaceId: activeWorkspace.id })),
-            dispatch(fetchStats()),
+            dispatch(fetchStats(activeWorkspace.id)),
             dispatch(fetchRules(activeWorkspace.id)),
             dispatch(fetchWorkspaceMembers(activeWorkspace.id)),
             dispatch(fetchEnvVars({ workspaceId: activeWorkspace.id })),

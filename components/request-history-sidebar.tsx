@@ -85,7 +85,7 @@ export function RequestHistorySidebar({
         if (activeWorkspaceId) {
           await dispatch(fetchCollections(activeWorkspaceId))
         }
-        await dispatch(fetchLogs({ limit: 20 }))
+        await dispatch(fetchLogs({ limit: 20, workspaceId: activeWorkspaceId || undefined }))
       } catch (error) {
         console.error("Failed to fetch data:", error)
       } finally {

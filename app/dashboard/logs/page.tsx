@@ -10,20 +10,23 @@ import { fetchLogs, fetchStats } from "@/lib/store/slices/logsSlice"
 export default function LogsPage() {
   const dispatch = useAppDispatch()
   const { logs, stats } = useAppSelector((state) => state.logs)
+  const { activeWorkspaceId } = useAppSelector((state) => state.workspaces)
 
   useEffect(() => {
     const loadData = async () => {
       try {
         await Promise.all([
-          dispatch(fetchLogs({ limit: 1000 })),
-          dispatch(fetchStats()),
+          dispatch(fetchLogs({ limit: 1000, workspaceId: activeWorkspaceId || undefined })),
+          dispatch(fetchStats(activeWorkspaceId || undefined)),
         ]);
       } catch (error) {
         console.error('Failed to load logs:', error);
       }
     };
-    loadData();
-  }, [dispatch])
+    if (activeWorkspaceId) {
+      loadData();
+    }
+  }, [dispatch, activeWorkspaceId])
 
   const totalRequests = logs.length
   const avgLatency = stats?.avgLatency || 0

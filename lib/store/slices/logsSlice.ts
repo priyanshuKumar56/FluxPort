@@ -64,8 +64,8 @@ export const createLog = createAsyncThunk(
   }
 );
 
-export const fetchStats = createAsyncThunk('logs/fetchStats', async () => {
-  return await apiClient.getApiLogStats();
+export const fetchStats = createAsyncThunk('logs/fetchStats', async (workspaceId?: string) => {
+  return await apiClient.getApiLogStats(workspaceId);
 });
 
 const logsSlice = createSlice({
