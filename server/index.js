@@ -54,6 +54,22 @@ app.options("*", (req, res) => {
 });
 app.use(express.json());
 
+// Root route
+app.get("/", (req, res) => {
+  res.json({
+    status: "ok",
+    message: "FluxPort Backend API",
+    version: "1.0.0",
+    endpoints: {
+      health: "/api/health",
+      auth: "/api/auth",
+      collections: "/api/collections",
+      workspaces: "/api/workspaces",
+      settings: "/api/settings",
+    },
+  });
+});
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/collections", collectionsRoutes);
