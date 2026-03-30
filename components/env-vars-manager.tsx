@@ -68,7 +68,7 @@ export function EnvVarsManager({ workspaceId }: { workspaceId: string }) {
             <CardTitle>Environment Variables</CardTitle>
             <CardDescription>Encrypted key-value pairs for your proxy rules and automated tests.</CardDescription>
           </div>
-          <Button size="sm" className="gap-2">
+          <Button size="sm" className="gap-2" onClick={() => setIsAddOpen(true)}>
             <Plus className="h-4 w-4" /> Add Variable
           </Button>
         </CardHeader>

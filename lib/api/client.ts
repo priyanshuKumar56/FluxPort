@@ -162,8 +162,9 @@ class ApiClient {
     });
   }
 
-  async getApiLogStats() {
-    return this.request<any>("/api-logs/stats");
+  async getApiLogStats(workspaceId?: string) {
+    const query = workspaceId ? `?workspaceId=${workspaceId}` : "";
+    return this.request<any>(`/api-logs/stats${query}`);
   }
 
   // Proxy

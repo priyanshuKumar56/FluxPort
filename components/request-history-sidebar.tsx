@@ -85,7 +85,7 @@ export function RequestHistorySidebar({
         if (activeWorkspaceId) {
           await dispatch(fetchCollections(activeWorkspaceId))
         }
-        await dispatch(fetchLogs({ limit: 20 }))
+        await dispatch(fetchLogs({ limit: 20, workspaceId: activeWorkspaceId || undefined }))
       } catch (error) {
         console.error("Failed to fetch data:", error)
       } finally {
@@ -103,12 +103,12 @@ export function RequestHistorySidebar({
           console.log("Testing collection access for:", col.id);
           const collection = await apiClient.getCollection(col.id);
           console.log("Collection access OK:", collection);
-          
+
           // Then get the tree structure
           console.log("Fetching tree for collection:", col.id);
           const tree = await apiClient.getCollectionTree(col.id);
           console.log("Tree fetched successfully:", tree);
-          
+
           return {
             ...col,
             items: [
@@ -255,7 +255,7 @@ export function RequestHistorySidebar({
             <Folder className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           )}
           <span className="text-[11px] font-medium flex-1 truncate">{item.name}</span>
-          
+
           {/* Folder actions */}
           <div className="opacity-0 group-hover:opacity-100 flex items-center pr-1 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
@@ -352,7 +352,7 @@ export function RequestHistorySidebar({
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    
+
                     <AccordionContent className="pb-1 pt-0">
                       <div className="ml-2 pl-2 border-l border-border/50">
                         {collection.items?.length ? (

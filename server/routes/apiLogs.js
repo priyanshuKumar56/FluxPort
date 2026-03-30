@@ -99,11 +99,34 @@ router.post("/", authenticateToken, async (req, res) => {
 // Get stats
 router.get("/stats", authenticateToken, async (req, res) => {
   try {
-    const logsResult = await pool.query(
-      `SELECT id, response_status, latency_ms
-       FROM api_logs WHERE user_id = $1 ORDER BY timestamp DESC LIMIT 1000`,
-      [req.user.userId],
-    );
+    const { workspaceId } = req.query;
+    
+    let logsResult;
+    if (workspaceId) {
+      // Check workspace access
+      const accessCheck = await pool.query(
+        `SELECT role FROM workspace_members 
+         WHERE workspace_id = $1 AND user_id = $2 AND status = 'active'`,
+        [workspaceId, req.user.userId],
+      );
+
+      if (accessCheck.rows.length === 0) {
+        return res.status(403).json({ error: "Access denied to this workspace" });
+      }
+      
+      logsResult = await pool.query(
+        `SELECT id, response_status, latency_ms
+         FROM api_logs WHERE workspace_id = $1 ORDER BY timestamp DESC LIMIT 1000`,
+        [workspaceId],
+      );
+    } else {
+      logsResult = await pool.query(
+        `SELECT id, response_status, latency_ms
+         FROM api_logs WHERE user_id = $1 ORDER BY timestamp DESC LIMIT 1000`,
+        [req.user.userId],
+      );
+    }
+    
     const logs = logsResult.rows;
 
     const stats = {
