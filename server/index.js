@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import compression from 'compression';
+import morgan from 'morgan';
+import pool from './db/index.js';
 import authRoutes from './routes/auth.js';
 import collectionsRoutes from './routes/collections.js';
 import foldersRoutes from './routes/folders.js';
@@ -20,7 +22,8 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Compression middleware
+// Logging & Performance
+app.use(morgan('dev'));
 app.use(compression());
 
 // CORS configuration
@@ -53,8 +56,27 @@ app.use('/api/saved-requests', savedRequestsRoutes);
 app.use('/api/api-logs', apiLogsRoutes);
 app.use('/api/interceptor-rules', interceptorRulesRoutes);
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'FluxPort Backend API' });
+app.get('/api/health', async (req, res) => {
+  const startedAt = Date.now();
+  try {
+    // Warm Postgres/Neon pool too (lightweight query).
+    await pool.query('SELECT 1 as ok');
+    res.json({
+      status: 'ok',
+      message: 'FluxPort Backend API',
+      db: 'connected',
+      ms: Date.now() - startedAt,
+    });
+  } catch (err) {
+    res.status(503).json({
+      status: 'error',
+      message: 'Health check failed',
+      db: 'unavailable',
+      ms: Date.now() - startedAt,
+      // Avoid leaking secrets; only send safe error text.
+      error: err?.message ? String(err.message) : 'unknown',
+    });
+  }
 });
 
 app.listen(PORT, () => {
