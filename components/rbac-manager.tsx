@@ -5,19 +5,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { UserPlus, MoreHorizontal, Shield, User } from "lucide-react"
-import { useAppSelector } from "@/lib/store/hooks"
+import { UserPlus, MoreHorizontal, Shield, User, Loader2 } from "lucide-react"
+import { useAppSelector, useAppDispatch } from "@/lib/store/hooks"
 import { InviteMemberModal } from "@/components/invite-member-modal"
+import { inviteMember, removeMember, updateMemberRole } from "@/lib/store/slices/workspacesSlice"
 
-export function RbacManager({ organizationId }: { organizationId: string }) {
+export function RbacManager({ workspaceId }: { workspaceId: string }) {
   const { user } = useAppSelector((state) => state.auth)
-  const { members, activeWorkspaceId } = useAppSelector((state) => state.workspaces)
+  const { members, loading } = useAppSelector((state) => state.workspaces)
+  const dispatch = useAppDispatch()
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
-  const handleCreateLink = () => {
-    const link = `http://localhost:3000/invite/${activeWorkspaceId}-${Math.random().toString(36).substr(2, 6)}`
+  const handleCreateLink = async () => {
+    if (!workspaceId) return
+    // This would generate a real invite link from the backend
+    const link = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/invite/${workspaceId}`
     setInviteLink(link)
   }
 
@@ -28,14 +33,42 @@ export function RbacManager({ organizationId }: { organizationId: string }) {
       setTimeout(() => setCopied(false), 2000)
     }
   }
-  
-  // Mix original user with invited members for display
-  const displayMembers = [...(user ? [user] : []), ...members]
-  const loading = false
+
+  const handleInvite = async (email: string, role: string) => {
+    if (!workspaceId) return
+    setActionLoading('invite')
+    try {
+      await dispatch(inviteMember({ workspaceId, email, role })).unwrap()
+      setIsInviteOpen(false)
+    } catch (error) {
+      console.error('Failed to invite member:', error)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleRemoveMember = async (memberId: string) => {
+    if (!workspaceId) return
+    setActionLoading(memberId)
+    try {
+      await dispatch(removeMember({ workspaceId, memberId })).unwrap()
+    } catch (error) {
+      console.error('Failed to remove member:', error)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const displayMembers = members
 
   return (
     <div className="space-y-8 mt-2 max-w-5xl text-foreground">
-      <InviteMemberModal open={isInviteOpen} onOpenChange={setIsInviteOpen} />
+      <InviteMemberModal
+        open={isInviteOpen}
+        onOpenChange={setIsInviteOpen}
+        onInvite={handleInvite}
+        loading={actionLoading === 'invite'}
+      />
 
       {/* Public Invite link */}
       <div>
@@ -86,31 +119,32 @@ export function RbacManager({ organizationId }: { organizationId: string }) {
                 const displayName = m.full_name || m.name || m.email.split("@")[0];
                 const displayRole = m.role ? m.role.charAt(0).toUpperCase() + m.role.slice(1) : "Admin";
                 return (
-                <TableRow key={m.id} className="border-b border-white/5 hover:bg-white/5 transition-colors border-none group">
-                  <TableCell className="py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded bg-white/20 flex flex-col items-center justify-end overflow-hidden pb-0 border border-white/10">
-                        {/* Fake user silhouette */}
-                        <div className="w-4 h-4 rounded-full bg-white/70 mb-0.5" />
-                        <div className="w-8 h-4 rounded-t-full bg-white/70 translate-y-1" />
+                  <TableRow key={m.id} className="border-b border-white/5 hover:bg-white/5 transition-colors border-none group">
+                    <TableCell className="py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded bg-white/20 flex flex-col items-center justify-end overflow-hidden pb-0 border border-white/10">
+                          {/* Fake user silhouette */}
+                          <div className="w-4 h-4 rounded-full bg-white/70 mb-0.5" />
+                          <div className="w-8 h-4 rounded-t-full bg-white/70 translate-y-1" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-sm text-white">{displayName} {m.id === user?.id && <span className="text-foreground/60 font-normal">(You)</span>}</span>
+                          <span className="text-xs text-foreground/50">{m.email}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-sm text-white">{displayName} {m.id === user?.id && <span className="text-foreground/60 font-normal">(You)</span>}</span>
-                        <span className="text-xs text-foreground/50">{m.email}</span>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-4">
-                    <span className="text-sm font-medium text-white">
-                      {displayRole}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              )})}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <span className="text-sm font-medium text-white">
+                        {displayRole}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </div>
-        
+
         {displayMembers.length === 1 && (
           <p className="text-center text-sm font-medium text-foreground/70 mt-6 pt-2">
             You are the only member in this workspace, add more members to collaborate.

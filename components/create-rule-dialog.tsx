@@ -16,13 +16,14 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { useForm } from "react-hook-form"
-import { useAppDispatch } from "@/lib/store/hooks"
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks"
 import { createRule } from "@/lib/store/slices/rulesSlice"
 import { useState } from "react"
 
 export function CreateRuleDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const dispatch = useAppDispatch()
+  const { activeWorkspaceId } = useAppSelector((state) => state.workspaces)
   const form = useForm({
     defaultValues: {
       name: "",
@@ -34,16 +35,23 @@ export function CreateRuleDialog({ children }: { children: React.ReactNode }) {
   })
 
   async function onSubmit(values: any) {
+    if (!activeWorkspaceId) {
+      console.error('No workspace selected')
+      return
+    }
     try {
       await dispatch(createRule({
-        name: values.name,
-        description: values.description,
-        type: values.type,
-        matchType: "url",
-        matchPattern: values.matchPattern,
-        methods: values.methods === "ALL" ? null : [values.methods],
-        isActive: true,
-        priority: 0,
+        workspaceId: activeWorkspaceId,
+        data: {
+          name: values.name,
+          description: values.description,
+          type: values.type,
+          matchType: "url",
+          matchPattern: values.matchPattern,
+          methods: values.methods === "ALL" ? null : [values.methods],
+          isActive: true,
+          priority: 0,
+        }
       })).unwrap()
       setOpen(false)
       form.reset()

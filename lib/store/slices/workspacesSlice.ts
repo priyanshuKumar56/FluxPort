@@ -1,20 +1,29 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { apiClient } from "@/lib/api/client";
 
 export interface Workspace {
   id: string;
   name: string;
-  ownerId: string;
-  isTeam: boolean;
-  createdAt: string;
+  slug: string;
+  description?: string;
+  owner_id: string;
+  is_personal: boolean;
+  settings?: any;
+  member_role?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface WorkspaceMember {
   id: string;
-  workspaceId: string;
-  userId: string;
+  workspace_id: string;
+  user_id: string;
   email: string;
-  role: 'admin' | 'editor' | 'viewer';
-  joinedAt: string;
+  full_name?: string;
+  avatar_url?: string;
+  role: "owner" | "admin" | "editor" | "viewer";
+  status: "active" | "pending" | "inactive";
+  joined_at: string;
 }
 
 interface WorkspacesState {
@@ -22,86 +31,217 @@ interface WorkspacesState {
   members: WorkspaceMember[];
   activeWorkspaceId: string | null;
   loading: boolean;
+  error: string | null;
 }
 
-// Load initial state from local storage to simulate persistence
-const loadState = () => {
-  if (typeof window === 'undefined') return { workspaces: [], members: [] };
-  const storedWorkspaces = localStorage.getItem('fluxport_workspaces');
-  const storedMembers = localStorage.getItem('fluxport_members');
-  
-  let parsedWorkspaces = storedWorkspaces ? JSON.parse(storedWorkspaces) : [];
-  
-  if (parsedWorkspaces.length === 0) {
-    parsedWorkspaces = [{
-      id: "default-local",
-      name: "My Workspace",
-      ownerId: "local",
-      isTeam: false,
-      createdAt: new Date().toISOString()
-    }];
-    localStorage.setItem('fluxport_workspaces', JSON.stringify(parsedWorkspaces));
-  }
-
-  return {
-    workspaces: parsedWorkspaces,
-    members: storedMembers ? JSON.parse(storedMembers) : []
-  };
-};
-
-const savedState = loadState();
-
 const initialState: WorkspacesState = {
-  workspaces: savedState.workspaces,
-  members: savedState.members,
-  activeWorkspaceId: savedState.workspaces.length > 0 ? savedState.workspaces[0].id : null,
+  workspaces: [],
+  members: [],
+  activeWorkspaceId: null,
   loading: false,
+  error: null,
 };
+
+// ============================================================================
+// ASYNC THUNKS
+// ============================================================================
+
+export const fetchWorkspaces = createAsyncThunk(
+  "workspaces/fetchAll",
+  async () => {
+    try {
+      const workspaces = await apiClient.getWorkspaces();
+      return workspaces || [];
+    } catch (error) {
+      console.error("Failed to fetch workspaces:", error);
+      throw error;
+    }
+  },
+);
+
+export const createWorkspace = createAsyncThunk(
+  "workspaces/create",
+  async (data: {
+    name: string;
+    description?: string;
+    is_personal?: boolean;
+  }) => {
+    return await apiClient.createWorkspace(data);
+  },
+);
+
+export const updateWorkspace = createAsyncThunk(
+  "workspaces/update",
+  async ({
+    id,
+    data,
+  }: {
+    id: string;
+    data: { name?: string; description?: string; settings?: any };
+  }) => {
+    return await apiClient.updateWorkspace(id, data);
+  },
+);
+
+export const deleteWorkspace = createAsyncThunk(
+  "workspaces/delete",
+  async (id: string) => {
+    await apiClient.deleteWorkspace(id);
+    return id;
+  },
+);
+
+export const fetchWorkspaceMembers = createAsyncThunk(
+  "workspaces/fetchMembers",
+  async (workspaceId: string) => {
+    try {
+      const members = await apiClient.getWorkspaceMembers(workspaceId);
+      return members || [];
+    } catch (error) {
+      console.error("Failed to fetch members:", error);
+      return [];
+    }
+  },
+);
+
+export const inviteMember = createAsyncThunk(
+  "workspaces/inviteMember",
+  async ({
+    workspaceId,
+    email,
+    role,
+  }: {
+    workspaceId: string;
+    email: string;
+    role?: string;
+  }) => {
+    return await apiClient.inviteWorkspaceMember(workspaceId, email, role);
+  },
+);
+
+export const acceptInvitation = createAsyncThunk(
+  "workspaces/acceptInvitation",
+  async (token: string) => {
+    return await apiClient.acceptInvitation(token);
+  },
+);
+
+export const updateMemberRole = createAsyncThunk(
+  "workspaces/updateMemberRole",
+  async ({
+    workspaceId,
+    memberId,
+    role,
+  }: {
+    workspaceId: string;
+    memberId: string;
+    role: string;
+  }) => {
+    return await apiClient.updateMemberRole(workspaceId, memberId, role);
+  },
+);
+
+export const removeMember = createAsyncThunk(
+  "workspaces/removeMember",
+  async ({
+    workspaceId,
+    memberId,
+  }: {
+    workspaceId: string;
+    memberId: string;
+  }) => {
+    await apiClient.removeWorkspaceMember(workspaceId, memberId);
+    return memberId;
+  },
+);
+
+export const leaveWorkspace = createAsyncThunk(
+  "workspaces/leave",
+  async (workspaceId: string) => {
+    await apiClient.leaveWorkspace(workspaceId);
+    return workspaceId;
+  },
+);
+
+// ============================================================================
+// SLICE
+// ============================================================================
 
 const workspacesSlice = createSlice({
-  name: 'workspaces',
+  name: "workspaces",
   initialState,
   reducers: {
     setActiveWorkspace(state, action: PayloadAction<string>) {
       state.activeWorkspaceId = action.payload;
     },
-    createWorkspace(state, action: PayloadAction<{ name: string, isTeam: boolean, ownerId: string }>) {
-      const newWorkspace: Workspace = {
-        id: Date.now().toString(),
-        name: action.payload.name,
-        isTeam: action.payload.isTeam,
-        ownerId: action.payload.ownerId,
-        createdAt: new Date().toISOString()
-      };
-      state.workspaces.push(newWorkspace);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('fluxport_workspaces', JSON.stringify(state.workspaces));
-      }
-      // Automatically switch to the newly created workspace
-      state.activeWorkspaceId = newWorkspace.id;
+    clearWorkspacesError(state) {
+      state.error = null;
     },
-    inviteMember(state, action: PayloadAction<{ workspaceId: string, email: string, role: WorkspaceMember['role'] }>) {
-      const newMember: WorkspaceMember = {
-        id: Date.now().toString(),
-        workspaceId: action.payload.workspaceId,
-        userId: `user_${Math.random().toString(36).substr(2, 9)}`, // Mock user ID
-        email: action.payload.email,
-        role: action.payload.role,
-        joinedAt: new Date().toISOString()
-      };
-      state.members.push(newMember);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('fluxport_members', JSON.stringify(state.members));
-      }
-    },
-    removeMember(state, action: PayloadAction<string>) {
-      state.members = state.members.filter(m => m.id !== action.payload);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('fluxport_members', JSON.stringify(state.members));
-      }
-    }
-  }
+  },
+  extraReducers: (builder) => {
+    builder
+      // Fetch workspaces
+      .addCase(fetchWorkspaces.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchWorkspaces.fulfilled, (state, action) => {
+        state.loading = false;
+        state.workspaces = action.payload;
+        // Set first workspace as active if none selected
+        if (!state.activeWorkspaceId && action.payload.length > 0) {
+          state.activeWorkspaceId = action.payload[0].id;
+        }
+      })
+      .addCase(fetchWorkspaces.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || "Failed to fetch workspaces";
+      })
+      // Create workspace
+      .addCase(createWorkspace.fulfilled, (state, action) => {
+        state.workspaces.push(action.payload);
+        state.activeWorkspaceId = action.payload.id;
+      })
+      // Update workspace
+      .addCase(updateWorkspace.fulfilled, (state, action) => {
+        const index = state.workspaces.findIndex(
+          (w) => w.id === action.payload.id,
+        );
+        if (index !== -1) {
+          state.workspaces[index] = action.payload;
+        }
+      })
+      // Delete workspace
+      .addCase(deleteWorkspace.fulfilled, (state, action) => {
+        state.workspaces = state.workspaces.filter(
+          (w) => w.id !== action.payload,
+        );
+        if (state.activeWorkspaceId === action.payload) {
+          state.activeWorkspaceId =
+            state.workspaces.length > 0 ? state.workspaces[0].id : null;
+        }
+      })
+      // Fetch members
+      .addCase(fetchWorkspaceMembers.fulfilled, (state, action) => {
+        state.members = action.payload;
+      })
+      // Remove member
+      .addCase(removeMember.fulfilled, (state, action) => {
+        state.members = state.members.filter((m) => m.id !== action.payload);
+      })
+      // Leave workspace
+      .addCase(leaveWorkspace.fulfilled, (state, action) => {
+        state.workspaces = state.workspaces.filter(
+          (w) => w.id !== action.payload,
+        );
+        if (state.activeWorkspaceId === action.payload) {
+          state.activeWorkspaceId =
+            state.workspaces.length > 0 ? state.workspaces[0].id : null;
+        }
+      });
+  },
 });
 
-export const { setActiveWorkspace, createWorkspace, inviteMember, removeMember } = workspacesSlice.actions;
+export const { setActiveWorkspace, clearWorkspacesError } =
+  workspacesSlice.actions;
 export default workspacesSlice.reducer;

@@ -5,10 +5,11 @@ import { ApiRequestBuilder } from "@/components/api-request-builder"
 import { GraphqlRequestBuilder } from "@/components/api-client/graphql-request-builder"
 import { RuntimeVariablesPage } from "@/components/api-client/runtime-variables"
 import { EnvironmentEditor } from "@/components/api-client/environment-editor"
+import { WebSocketTester } from "@/components/websocket-tester"
 import { RequestHistorySidebar } from "@/components/request-history-sidebar"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { Button } from "@/components/ui/button"
-import { X, Plus, FileCode, Edit2, Check, ChevronDown, Import, Globe, Code2, ChevronRight, Folder, ArrowRightLeft, Hexagon, AlignJustify } from "lucide-react"
+import { X, Plus, FileCode, Edit2, Check, ChevronDown, Import, Globe, Code2, ChevronRight, Folder, ArrowRightLeft, Hexagon, AlignJustify, Wifi } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +21,7 @@ import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
 // Tab types
-type TabType = "http" | "graphql" | "variables" | "environment"
+type TabType = "http" | "graphql" | "websocket" | "variables" | "environment"
 
 interface RequestTab {
   id: string
@@ -47,7 +48,7 @@ export default function ApiClientPage() {
   const addNewTab = (type: TabType = "http") => {
     const newTab: RequestTab = {
       id: Date.now().toString(),
-      name: type === "graphql" ? "grphql" : type === "variables" ? "Runtime Variables" : "Untitled request",
+      name: type === "graphql" ? "GraphQL" : type === "websocket" ? "WebSocket" : type === "variables" ? "Runtime Variables" : "Untitled request",
       type,
       method: type === "graphql" ? "POST" : "GET",
       url: "",
@@ -291,13 +292,30 @@ export default function ApiClientPage() {
 
         {/* Add tab button */}
         <div className="flex items-center gap-0.5 px-1 border-l border-border h-full">
-          <button
-            className="w-7 h-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => addNewTab("http")}
-            title="New HTTP request"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="w-7 h-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                title="New request"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => addNewTab("http")}>
+                <Globe className="h-4 w-4 mr-2" />
+                HTTP Request
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addNewTab("graphql")}>
+                <Hexagon className="h-4 w-4 mr-2" />
+                GraphQL Request
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addNewTab("websocket")}>
+                <Wifi className="h-4 w-4 mr-2" />
+                WebSocket
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -392,6 +410,8 @@ export default function ApiClientPage() {
                     }}
                     onUrlChange={(newUrl) => updateTabMeta(tab.id, { url: newUrl, isDirty: true })}
                   />
+                ) : tab.type === "websocket" ? (
+                  <WebSocketTester initialUrl={tab.url} />
                 ) : tab.type === "variables" ? (
                   <RuntimeVariablesPage />
                 ) : tab.type === "environment" ? (

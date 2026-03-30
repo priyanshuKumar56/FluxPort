@@ -15,6 +15,8 @@ import { Activity, Zap, ShieldAlert, BarChart3, FlaskConical, History } from "lu
 import { Badge } from "@/components/ui/badge"
 import { fetchLogs, fetchStats } from "@/lib/store/slices/logsSlice"
 import { fetchRules } from "@/lib/store/slices/rulesSlice"
+import { fetchWorkspaceMembers } from "@/lib/store/slices/workspacesSlice"
+import { fetchEnvVars, fetchApiKeys, fetchWorkspaceSettings } from "@/lib/store/slices/settingsSlice"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
@@ -22,19 +24,26 @@ import { cn } from "@/lib/utils"
 export default function SettingsPage() {
   const { user } = useAppSelector((state) => state.auth)
   const dispatch = useAppDispatch()
-  
+
   // Overview state
   const { logs, stats } = useAppSelector((state) => state.logs)
   const { rules } = useAppSelector((state) => state.rules)
 
+  // Must be declared before useEffect uses it
+  const activeWorkspace = useAppSelector(state => state.workspaces.workspaces.find(w => w.id === state.workspaces.activeWorkspaceId))
+
   useEffect(() => {
-    if (user) {
+    if (user && activeWorkspace?.id) {
       const loadData = async () => {
         try {
           await Promise.all([
             dispatch(fetchLogs({ limit: 1000 })),
             dispatch(fetchStats()),
-            dispatch(fetchRules()),
+            dispatch(fetchRules(activeWorkspace.id)),
+            dispatch(fetchWorkspaceMembers(activeWorkspace.id)),
+            dispatch(fetchEnvVars({ workspaceId: activeWorkspace.id })),
+            dispatch(fetchApiKeys(activeWorkspace.id)),
+            dispatch(fetchWorkspaceSettings(activeWorkspace.id)),
           ]);
         } catch (error) {
           console.error('Failed to load dashboard data:', error);
@@ -42,13 +51,11 @@ export default function SettingsPage() {
       };
       loadData();
     }
-  }, [dispatch, user])
+  }, [dispatch, user, activeWorkspace?.id])
 
   if (!user) return null
 
   const clientLogs = logs?.filter((l) => !l.requestUrl.includes("/api/proxy")) || []
-
-  const activeWorkspace = useAppSelector(state => state.workspaces.workspaces.find(w => w.id === state.workspaces.activeWorkspaceId))
 
   const dashboardStats = {
     totalRequests: logs?.length || 0,
@@ -338,15 +345,15 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="team">
-          <RbacManager organizationId={user.id} />
+          <RbacManager workspaceId={activeWorkspace?.id || ''} />
         </TabsContent>
 
         <TabsContent value="env">
-          <EnvVarsManager organizationId={user.id} />
+          <EnvVarsManager workspaceId={activeWorkspace?.id || ''} />
         </TabsContent>
 
         <TabsContent value="api-keys">
-          <ApiKeysManager organizationId={user.id} />
+          <ApiKeysManager workspaceId={activeWorkspace?.id || ''} />
         </TabsContent>
       </Tabs>
     </div>
