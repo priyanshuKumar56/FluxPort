@@ -55,7 +55,7 @@ export default function SettingsPage() {
 
   if (!user) return null
 
-  const clientLogs = logs?.filter((l) => !l.requestUrl.includes("/api/proxy")) || []
+  const clientLogs = logs?.filter((l) => !l.requestUrl?.includes("/api/proxy")) || []
 
   const dashboardStats = {
     totalRequests: logs?.length || 0,
