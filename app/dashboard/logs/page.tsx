@@ -31,7 +31,7 @@ export default function LogsPage() {
   const totalRequests = logs.length
   const avgLatency = stats?.avgLatency || 0
   const errorCount = logs.filter(l => l.responseStatus >= 400).length
-  const successRate = logs.length > 0 
+  const successRate = logs.length > 0
     ? ((logs.filter(l => l.responseStatus < 400).length / logs.length) * 100).toFixed(1)
     : "100.0"
 
