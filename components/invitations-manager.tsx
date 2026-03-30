@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks"
 import { fetchWorkspaceInvitations } from "@/lib/store/slices/workspacesSlice"
@@ -120,7 +120,7 @@ export function InvitationsManager({ workspaceId }: { workspaceId: string }) {
           </div>
         ) : (
           <Table>
-            <TableHead>
+            <TableHeader>
               <TableRow>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
@@ -129,7 +129,7 @@ export function InvitationsManager({ workspaceId }: { workspaceId: string }) {
                 <TableHead>Expires</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
-            </TableHead>
+            </TableHeader>
             <TableBody>
               {invitations.map((invitation: Invitation) => (
                 <TableRow key={invitation.id}>

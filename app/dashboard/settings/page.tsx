@@ -318,12 +318,12 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="env" className="space-y-6">
-          <EnvVarsManager workspaceId={activeWorkspace?.id || ''} />
+        <TabsContent value="team" className="space-y-6">
+          <RbacManager workspaceId={activeWorkspace?.id || ''} />
         </TabsContent>
 
-        <TabsContent value="api-keys" className="space-y-6">
-          <ApiKeysManager workspaceId={activeWorkspace?.id || ''} />
+        <TabsContent value="invitations" className="space-y-6">
+          <InvitationsManager workspaceId={activeWorkspace?.id || ''} />
         </TabsContent>
 
         <TabsContent value="general" className="space-y-6">
@@ -336,7 +336,7 @@ export default function SettingsPage() {
               <div className="flex gap-4">
                 <input
                   className="flex-1 bg-input/50 border border-border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none focus:border-primary/50"
-                  defaultValue="My API Gateway"
+                  defaultValue={activeWorkspace?.name || 'My API Gateway'}
                 />
                 <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-semibold hover:bg-primary/90 transition-colors">
                   Save
@@ -359,11 +359,11 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="env">
+        <TabsContent value="env" className="space-y-6">
           <EnvVarsManager workspaceId={activeWorkspace?.id || ''} />
         </TabsContent>
 
-        <TabsContent value="api-keys">
+        <TabsContent value="api-keys" className="space-y-6">
           <ApiKeysManager workspaceId={activeWorkspace?.id || ''} />
         </TabsContent>
       </Tabs>
