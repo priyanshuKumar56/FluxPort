@@ -171,7 +171,11 @@ export function RequestHistorySidebar({
         {
           name: newRequestName,
           method: newRequestType === "graphql" ? "POST" : "GET",
-          url: "",
+          url: "https://api.example.com/endpoint",
+          headers: {},
+          body: null,
+          params: {},
+          auth: {},
         }
       )
       setIsAddRequestOpen(false)
@@ -184,7 +188,7 @@ export function RequestHistorySidebar({
   const submitCreateFolder = async () => {
     if (!newFolderName || !addFolderTarget) return
     try {
-      await apiClient.createFolder(newFolderName, addFolderTarget.collectionId)
+      await apiClient.createFolder(addFolderTarget.collectionId, newFolderName)
       setIsAddFolderOpen(false)
       await refreshStructure()
     } catch (err) {

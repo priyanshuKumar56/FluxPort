@@ -56,6 +56,16 @@ class ApiClient {
         .json()
         .catch(() => ({ error: "Network error" }));
       
+      // Don't log errors for 404 on certain endpoints (empty data is expected)
+      if (response.status === 404 && (
+        endpoint.includes('/settings/') || 
+        endpoint.includes('/env') || 
+        endpoint.includes('/api-keys')
+      )) {
+        // Silently handle expected 404s for empty data
+        return [] as T;
+      }
+      
       console.log("API Error Response:", {
         status: response.status,
         statusText: response.statusText,
@@ -305,6 +315,10 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify({ token }),
     });
+  }
+
+  async getWorkspaceInvitations(workspaceId: string) {
+    return this.request<any[]>(`/workspaces/${workspaceId}/invitations`);
   }
 
   async updateMemberRole(workspaceId: string, memberId: string, role: string) {

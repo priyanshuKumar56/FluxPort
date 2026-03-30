@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks"
 import { inviteMember } from "@/lib/store/slices/workspacesSlice"
+import { toast } from "sonner"
 
 export function InviteMemberModal({
   open,
@@ -44,19 +45,25 @@ export function InviteMemberModal({
     if (!activeWorkspaceId) return
     setInternalLoading(true)
 
-    // Simulate network request
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    dispatch(inviteMember({
-      workspaceId: activeWorkspaceId,
-      email,
-      role
-    }))
-
-    setInternalLoading(false)
-    setEmail("")
-    onOpenChange(false)
+    try {
+      await dispatch(inviteMember({
+        workspaceId: activeWorkspaceId,
+        email,
+        role
+      })).unwrap()
+      setEmail("")
+      toast.success(`Invitation sent to ${email}`)
+    } catch (error: any) {
+      console.error("Failed to invite member:", error)
+      toast.error(error?.error || error?.message || "Failed to send invitation")
+    } finally {
+      setInternalLoading(false)
+    }
   }
+
+  const invitationLink = activeWorkspaceId ? 
+    `${typeof window !== 'undefined' ? window.location.origin : ''}/invite?token=INVITE_TOKEN_HERE` : 
+    "Select a workspace first"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -64,7 +71,7 @@ export function InviteMemberModal({
         <DialogHeader>
           <DialogTitle>Invite Team Member</DialogTitle>
           <DialogDescription>
-            Invite teammates to collaborate in the current workspace. They will receive an email invitation.
+            Invite teammates to collaborate in current workspace. They will receive an email invitation.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -101,6 +108,28 @@ export function InviteMemberModal({
               </Select>
             </div>
           </div>
+          
+          {invitationLink && (
+            <div className="col-span-4 space-y-2">
+              <Label className="text-right">
+                Test Invitation Link
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  value={invitationLink}
+                  readOnly
+                  className="text-xs text-muted-foreground"
+                  onClick={() => {
+                    navigator.clipboard.writeText(invitationLink)
+                    toast.success('Invitation link copied to clipboard')
+                  }}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Use this link to test invitation acceptance (replace INVITE_TOKEN_HERE with actual token)
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
