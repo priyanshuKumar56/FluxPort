@@ -17,7 +17,7 @@ router.post("/register", async (req, res) => {
     // Check if user exists
     const t0 = Date.now();
     const existingUser = await pool.query(
-      'SELECT id FROM "User" WHERE email = $1',
+      "SELECT id FROM users WHERE email = $1",
       [email],
     );
     const t1 = Date.now();
@@ -33,7 +33,7 @@ router.post("/register", async (req, res) => {
     // Create user
     const t4 = Date.now();
     const result = await pool.query(
-      'INSERT INTO "User" (id, email, password, "createdAt", "updatedAt") VALUES (gen_random_uuid()::text, $1, $2, NOW(), NOW()) RETURNING id, email, "createdAt"',
+      "INSERT INTO users (id, email, password_hash, created_at, updated_at) VALUES (uuid_generate_v4(), $1, $2, NOW(), NOW()) RETURNING id, email, created_at",
       [email, hashedPassword],
     );
     const t5 = Date.now();
@@ -85,7 +85,7 @@ router.post("/login", async (req, res) => {
 
     // Find user
     const t0 = Date.now();
-    const result = await pool.query('SELECT * FROM "User" WHERE email = $1', [
+    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
       email,
     ]);
     const t1 = Date.now();
@@ -97,7 +97,7 @@ router.post("/login", async (req, res) => {
 
     // Verify password
     const t2 = Date.now();
-    const isValid = await bcrypt.compare(password, user.password);
+    const isValid = await bcrypt.compare(password, user.password_hash);
     const t3 = Date.now();
 
     if (process.env.NODE_ENV !== "production") {
@@ -142,7 +142,7 @@ router.get("/me", async (req, res) => {
       process.env.JWT_SECRET || "your-secret-key",
     );
     const result = await pool.query(
-      'SELECT id, email, "createdAt" FROM "User" WHERE id = $1',
+      "SELECT id, email, created_at FROM users WHERE id = $1",
       [decoded.userId],
     );
 
