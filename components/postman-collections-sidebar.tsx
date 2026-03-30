@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -22,136 +22,58 @@ import {
   File,
   FolderPlus,
   FilePlus,
+  Loader2,
+  Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
-
-interface Collection {
-  id: string
-  name: string
-  type: "collection" | "folder" | "request"
-  method?: string
-  url?: string
-  children?: Collection[]
-  expanded?: boolean
-  starred?: boolean
-}
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks"
+import {
+  fetchCollections,
+  fetchCollectionTree,
+  createCollection,
+  createFolder,
+  createSavedRequest,
+  deleteCollection,
+  clearCurrentCollection
+} from "@/lib/store/slices/collectionsSlice"
 
 interface PostmanCollectionsSidebarProps {
   onRequestSelect: (request: any) => void
 }
 
+interface ExpandedState {
+  [key: string]: boolean
+}
+
 export function PostmanCollectionsSidebar({ onRequestSelect }: PostmanCollectionsSidebarProps) {
+  const dispatch = useAppDispatch()
+  const { collections, currentCollection, loading } = useAppSelector((state) => state.collections)
+  const { activeWorkspaceId } = useAppSelector((state) => state.workspaces)
+
   const [searchTerm, setSearchTerm] = useState("")
   const [newItemName, setNewItemName] = useState("")
   const [newItemType, setNewItemType] = useState<"collection" | "folder" | "request">("collection")
-  const [selectedParentId, setSelectedParentId] = useState<string | null>(null)
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null)
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [collections, setCollections] = useState<Collection[]>([
-    {
-      id: "workspace-1",
-      name: "My Workspace",
-      type: "collection",
-      expanded: true,
-      children: [
-        {
-          id: "collection-1",
-          name: "Fluxport Tests",
-          type: "collection",
-          expanded: true,
-          starred: true,
-          children: [
-            {
-              id: "folder-1",
-              name: "Authentication",
-              type: "folder",
-              expanded: false,
-              children: [
-                {
-                  id: "req-1",
-                  name: "Login",
-                  type: "request",
-                  method: "POST",
-                  url: "https://api.example.com/auth/login",
-                },
-                {
-                  id: "req-2",
-                  name: "Refresh Token",
-                  type: "request",
-                  method: "POST",
-                  url: "https://api.example.com/auth/refresh",
-                },
-              ],
-            },
-            {
-              id: "folder-2",
-              name: "Users",
-              type: "folder",
-              expanded: true,
-              children: [
-                {
-                  id: "req-3",
-                  name: "Get Users",
-                  type: "request",
-                  method: "GET",
-                  url: "https://jsonplaceholder.typicode.com/users",
-                },
-                {
-                  id: "req-4",
-                  name: "Create User",
-                  type: "request",
-                  method: "POST",
-                  url: "https://jsonplaceholder.typicode.com/users",
-                },
-                {
-                  id: "req-5",
-                  name: "Update User",
-                  type: "request",
-                  method: "PUT",
-                  url: "https://jsonplaceholder.typicode.com/users/1",
-                },
-                {
-                  id: "req-6",
-                  name: "Delete User",
-                  type: "request",
-                  method: "DELETE",
-                  url: "https://jsonplaceholder.typicode.com/users/1",
-                },
-              ],
-            },
-            {
-              id: "req-7",
-              name: "Health Check",
-              type: "request",
-              method: "GET",
-              url: "http://localhost:3000/api/health",
-            },
-          ],
-        },
-        {
-          id: "collection-2",
-          name: "Localhost Tests",
-          type: "collection",
-          expanded: false,
-          children: [
-            {
-              id: "req-8",
-              name: "Local API Health",
-              type: "request",
-              method: "GET",
-              url: "http://localhost:8080/health",
-            },
-            {
-              id: "req-9",
-              name: "Local Database",
-              type: "request",
-              method: "GET",
-              url: "http://localhost:3000/api/users",
-            },
-          ],
-        },
-      ],
-    },
-  ])
+  const [expandedCollections, setExpandedCollections] = useState<ExpandedState>({})
+
+  // Load collections when workspace changes
+  useEffect(() => {
+    if (activeWorkspaceId) {
+      dispatch(fetchCollections(activeWorkspaceId))
+    }
+  }, [dispatch, activeWorkspaceId])
+
+  // Load collection tree when expanded
+  const handleToggleCollection = async (collectionId: string) => {
+    const isExpanded = expandedCollections[collectionId]
+    setExpandedCollections(prev => ({ ...prev, [collectionId]: !isExpanded }))
+
+    if (!isExpanded && collectionId !== currentCollection?.id) {
+      dispatch(fetchCollectionTree(collectionId))
+    }
+  }
 
   const getMethodColor = (method: string) => {
     switch (method) {
@@ -170,211 +92,99 @@ export function PostmanCollectionsSidebar({ onRequestSelect }: PostmanCollection
     }
   }
 
-  const toggleExpanded = (id: string) => {
-    const updateCollections = (items: Collection[]): Collection[] => {
-      return items.map((item) => {
-        if (item.id === id) {
-          return { ...item, expanded: !item.expanded }
-        }
-        if (item.children) {
-          return { ...item, children: updateCollections(item.children) }
-        }
-        return item
-      })
-    }
-    setCollections(updateCollections(collections))
+  const handleRequestClick = (request: any) => {
+    onRequestSelect({
+      id: request.id,
+      name: request.name,
+      method: request.method,
+      url: request.url,
+      headers: request.headers || {},
+      body: request.body,
+      query_params: request.query_params,
+      auth_type: request.auth_type,
+      auth_config: request.auth_config,
+    })
   }
 
-  const handleRequestClick = (request: Collection) => {
-    if (request.type === "request") {
-      onRequestSelect({
-        id: request.id,
-        name: request.name,
-        method: request.method,
-        url: request.url,
-      })
-    }
-  }
-
-  const createNewItem = () => {
+  const createNewItem = async () => {
     if (!newItemName.trim()) {
       toast.error("Please enter a name")
       return
     }
 
-    const newItem: Collection = {
-      id: `${newItemType}-${Date.now()}`,
-      name: newItemName.trim(),
-      type: newItemType,
-      expanded: false,
-      children: newItemType !== "request" ? [] : undefined,
-      method: newItemType === "request" ? "GET" : undefined,
-      url: newItemType === "request" ? "https://api.example.com/endpoint" : undefined,
+    if (!activeWorkspaceId) {
+      toast.error("No workspace selected")
+      return
     }
 
-    const addToCollections = (items: Collection[]): Collection[] => {
-      if (!selectedParentId) {
-        // Add to root
-        return [...items, newItem]
+    try {
+      if (newItemType === "collection") {
+        await dispatch(createCollection({
+          workspaceId: activeWorkspaceId,
+          name: newItemName.trim()
+        })).unwrap()
+        toast.success("Collection created successfully")
+      } else if (newItemType === "folder" && selectedCollectionId) {
+        await dispatch(createFolder({
+          collectionId: selectedCollectionId,
+          name: newItemName.trim(),
+          parent_folder_id: selectedFolderId || undefined
+        })).unwrap()
+        toast.success("Folder created successfully")
+        // Refresh collection tree
+        dispatch(fetchCollectionTree(selectedCollectionId))
+      } else if (newItemType === "request" && selectedCollectionId) {
+        await dispatch(createSavedRequest({
+          collectionId: selectedCollectionId,
+          folderId: selectedFolderId || undefined,
+          data: {
+            name: newItemName.trim(),
+            method: "GET",
+            url: "https://api.example.com/endpoint",
+            headers: {},
+            auth_type: "none"
+          }
+        })).unwrap()
+        toast.success("Request created successfully")
+        // Refresh collection tree
+        dispatch(fetchCollectionTree(selectedCollectionId))
       }
 
-      return items.map((item) => {
-        if (item.id === selectedParentId) {
-          return {
-            ...item,
-            children: [...(item.children || []), newItem],
-            expanded: true,
-          }
-        }
-        if (item.children) {
-          return {
-            ...item,
-            children: addToCollections(item.children),
-          }
-        }
-        return item
-      })
+      setNewItemName("")
+      setShowCreateDialog(false)
+      setSelectedCollectionId(null)
+      setSelectedFolderId(null)
+    } catch (error) {
+      toast.error("Failed to create item")
+      console.error(error)
     }
-
-    setCollections(addToCollections(collections))
-    setNewItemName("")
-    setShowCreateDialog(false)
-    setSelectedParentId(null)
-    toast.success(`${newItemType.charAt(0).toUpperCase() + newItemType.slice(1)} created successfully`)
   }
 
-  const deleteItem = (id: string) => {
-    const removeFromCollections = (items: Collection[]): Collection[] => {
-      return items
-        .filter((item) => item.id !== id)
-        .map((item) => ({
-          ...item,
-          children: item.children ? removeFromCollections(item.children) : undefined,
-        }))
+  const handleDeleteCollection = async (id: string) => {
+    try {
+      await dispatch(deleteCollection(id)).unwrap()
+      toast.success("Collection deleted successfully")
+      if (currentCollection?.id === id) {
+        dispatch(clearCurrentCollection())
+      }
+    } catch (error) {
+      toast.error("Failed to delete collection")
     }
-
-    setCollections(removeFromCollections(collections))
-    toast.success("Item deleted successfully")
-  }
-
-  const renderCollection = (item: Collection, depth = 0) => {
-    const paddingLeft = depth * 16 + 8
-
-    return (
-      <div key={item.id}>
-        <div
-          className={`flex items-center gap-2 py-1 px-2 hover:bg-gray-100 cursor-pointer group ${
-            item.type === "request" ? "text-sm" : "text-sm font-medium"
-          }`}
-          style={{ paddingLeft }}
-          onClick={() => {
-            if (item.type === "request") {
-              handleRequestClick(item)
-            } else {
-              toggleExpanded(item.id)
-            }
-          }}
-        >
-          {item.children && item.children.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-4 w-4 p-0"
-              onClick={(e) => {
-                e.stopPropagation()
-                toggleExpanded(item.id)
-              }}
-            >
-              {item.expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-            </Button>
-          )}
-
-          {!item.children && <div className="w-4" />}
-
-          {item.type === "collection" && (
-            <div className="flex items-center gap-1">
-              {item.expanded ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
-              {item.starred && <Star className="h-3 w-3 text-yellow-500 fill-current" />}
-            </div>
-          )}
-
-          {item.type === "folder" && (
-            <div className="flex items-center gap-1">
-              {item.expanded ? (
-                <FolderOpen className="h-4 w-4 text-blue-600" />
-              ) : (
-                <Folder className="h-4 w-4 text-blue-600" />
-              )}
-            </div>
-          )}
-
-          {item.type === "request" && (
-            <>
-              <File className="h-4 w-4 text-gray-500" />
-              {item.method && (
-                <Badge className={`${getMethodColor(item.method)} text-xs px-1 py-0 h-5 min-w-12 justify-center`}>
-                  {item.method}
-                </Badge>
-              )}
-            </>
-          )}
-
-          <span className="flex-1 truncate">{item.name}</span>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <MoreHorizontal className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => {
-                  setSelectedParentId(item.id)
-                  setNewItemType("request")
-                  setShowCreateDialog(true)
-                }}
-              >
-                <FilePlus className="h-4 w-4 mr-2" />
-                Add Request
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  setSelectedParentId(item.id)
-                  setNewItemType("folder")
-                  setShowCreateDialog(true)
-                }}
-              >
-                <FolderPlus className="h-4 w-4 mr-2" />
-                Add Folder
-              </DropdownMenuItem>
-              <DropdownMenuItem>Duplicate</DropdownMenuItem>
-              <DropdownMenuItem>Rename</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => deleteItem(item.id)} className="text-red-600">
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {item.expanded && item.children && (
-          <div>{item.children.map((child) => renderCollection(child, depth + 1))}</div>
-        )}
-      </div>
-    )
   }
 
   const filteredCollections = collections.filter((collection) =>
     collection.name.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
+  const openCreateDialog = (type: "collection" | "folder" | "request", collectionId?: string, folderId?: string) => {
+    setNewItemType(type)
+    setSelectedCollectionId(collectionId || null)
+    setSelectedFolderId(folderId || null)
+    setShowCreateDialog(true)
+  }
+
   return (
-    <div className="border-r border-gray-200 bg-white flex flex-col w-full">
+    <div className="border-r border-gray-200 bg-white flex flex-col w-full h-full">
       {/* Sidebar Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
@@ -386,10 +196,7 @@ export function PostmanCollectionsSidebar({ onRequestSelect }: PostmanCollection
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0"
-                  onClick={() => {
-                    setSelectedParentId(null)
-                    setNewItemType("collection")
-                  }}
+                  onClick={() => openCreateDialog("collection")}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -413,6 +220,7 @@ export function PostmanCollectionsSidebar({ onRequestSelect }: PostmanCollection
                         variant={newItemType === "folder" ? "default" : "outline"}
                         size="sm"
                         onClick={() => setNewItemType("folder")}
+                        disabled={!selectedCollectionId}
                       >
                         Folder
                       </Button>
@@ -420,6 +228,7 @@ export function PostmanCollectionsSidebar({ onRequestSelect }: PostmanCollection
                         variant={newItemType === "request" ? "default" : "outline"}
                         size="sm"
                         onClick={() => setNewItemType("request")}
+                        disabled={!selectedCollectionId}
                       >
                         Request
                       </Button>
@@ -447,9 +256,6 @@ export function PostmanCollectionsSidebar({ onRequestSelect }: PostmanCollection
                 </div>
               </DialogContent>
             </Dialog>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <Settings className="h-4 w-4" />
-            </Button>
           </div>
         </div>
 
@@ -467,7 +273,148 @@ export function PostmanCollectionsSidebar({ onRequestSelect }: PostmanCollection
 
       {/* Collections List */}
       <ScrollArea className="flex-1">
-        <div className="p-2">{filteredCollections.map((collection) => renderCollection(collection))}</div>
+        <div className="p-2">
+          {loading && collections.length === 0 ? (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            </div>
+          ) : filteredCollections.length === 0 ? (
+            <div className="text-center p-8 text-gray-500">
+              <Folder className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+              <p className="text-sm">No collections found</p>
+              <p className="text-xs mt-1">Create a collection to get started</p>
+            </div>
+          ) : (
+            filteredCollections.map((collection) => (
+              <div key={collection.id}>
+                {/* Collection Header */}
+                <div
+                  className="flex items-center gap-2 py-1.5 px-2 hover:bg-gray-100 cursor-pointer group text-sm font-medium"
+                  onClick={() => handleToggleCollection(collection.id)}
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleCollection(collection.id)
+                    }}
+                  >
+                    {expandedCollections[collection.id] ? (
+                      <ChevronDown className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
+                  </Button>
+                  {expandedCollections[collection.id] ? (
+                    <FolderOpen className="h-4 w-4 text-yellow-600" />
+                  ) : (
+                    <Folder className="h-4 w-4 text-yellow-600" />
+                  )}
+                  <span className="flex-1 truncate">{collection.name}</span>
+                  {collection.request_count !== undefined && (
+                    <Badge variant="secondary" className="text-xs">
+                      {collection.request_count}
+                    </Badge>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreHorizontal className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openCreateDialog("folder", collection.id)}>
+                        <FolderPlus className="h-4 w-4 mr-2" />
+                        Add Folder
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openCreateDialog("request", collection.id)}>
+                        <FilePlus className="h-4 w-4 mr-2" />
+                        Add Request
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDeleteCollection(collection.id)} className="text-red-600">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {/* Collection Content */}
+                {expandedCollections[collection.id] && currentCollection?.id === collection.id && (
+                  <div className="ml-4">
+                    {/* Folders */}
+                    {currentCollection.folders?.map((folder) => (
+                      <div key={folder.id}>
+                        <div className="flex items-center gap-2 py-1 px-2 hover:bg-gray-100 cursor-pointer group text-sm">
+                          <div className="w-4" />
+                          <Folder className="h-4 w-4 text-blue-600" />
+                          <span className="flex-1 truncate">{folder.name}</span>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openCreateDialog("request", collection.id, folder.id)}>
+                                <FilePlus className="h-4 w-4 mr-2" />
+                                Add Request
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        {/* Requests in folder */}
+                        {folder.requests?.map((request) => (
+                          <div
+                            key={request.id}
+                            className="flex items-center gap-2 py-1 px-2 hover:bg-gray-100 cursor-pointer group text-sm"
+                            style={{ paddingLeft: "32px" }}
+                            onClick={() => handleRequestClick(request)}
+                          >
+                            <div className="w-4" />
+                            <File className="h-4 w-4 text-gray-500" />
+                            <Badge className={`${getMethodColor(request.method)} text-xs px-1 py-0 h-5 min-w-12 justify-center`}>
+                              {request.method}
+                            </Badge>
+                            <span className="flex-1 truncate">{request.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    {/* Root Requests */}
+                    {currentCollection.requests?.map((request) => (
+                      <div
+                        key={request.id}
+                        className="flex items-center gap-2 py-1 px-2 hover:bg-gray-100 cursor-pointer group text-sm"
+                        style={{ paddingLeft: "16px" }}
+                        onClick={() => handleRequestClick(request)}
+                      >
+                        <div className="w-4" />
+                        <File className="h-4 w-4 text-gray-500" />
+                        <Badge className={`${getMethodColor(request.method)} text-xs px-1 py-0 h-5 min-w-12 justify-center`}>
+                          {request.method}
+                        </Badge>
+                        <span className="flex-1 truncate">{request.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </ScrollArea>
 
       {/* Quick Actions */}

@@ -1,5 +1,5 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { apiClient } from '@/lib/api/client';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { apiClient } from "@/lib/api/client";
 
 interface InterceptorRule {
   id: string;
@@ -29,34 +29,43 @@ const initialState: RulesState = {
   error: null,
 };
 
-export const fetchRules = createAsyncThunk('rules/fetchAll', async () => {
-  try {
-    const rules = await apiClient.getInterceptorRules();
-    return rules || [];
-  } catch (error) {
-    console.error('Failed to fetch rules:', error);
-    return [];
-  }
-});
-
-export const createRule = createAsyncThunk('rules/create', async (data: any) => {
-  return await apiClient.createInterceptorRule(data);
-});
-
-export const updateRule = createAsyncThunk(
-  'rules/update',
-  async ({ id, data }: { id: string; data: any }) => {
-    return await apiClient.updateInterceptorRule(id, data);
-  }
+export const fetchRules = createAsyncThunk(
+  "rules/fetchAll",
+  async (workspaceId: string) => {
+    try {
+      const rules = await apiClient.getInterceptorRules(workspaceId);
+      return rules || [];
+    } catch (error) {
+      console.error("Failed to fetch rules:", error);
+      return [];
+    }
+  },
 );
 
-export const deleteRule = createAsyncThunk('rules/delete', async (id: string) => {
-  await apiClient.deleteInterceptorRule(id);
-  return id;
-});
+export const createRule = createAsyncThunk(
+  "rules/create",
+  async ({ workspaceId, data }: { workspaceId: string; data: any }) => {
+    return await apiClient.createInterceptorRule(workspaceId, data);
+  },
+);
+
+export const updateRule = createAsyncThunk(
+  "rules/update",
+  async ({ id, data }: { id: string; data: any }) => {
+    return await apiClient.updateInterceptorRule(id, data);
+  },
+);
+
+export const deleteRule = createAsyncThunk(
+  "rules/delete",
+  async (id: string) => {
+    await apiClient.deleteInterceptorRule(id);
+    return id;
+  },
+);
 
 const rulesSlice = createSlice({
-  name: 'rules',
+  name: "rules",
   initialState,
   reducers: {},
   extraReducers: (builder) => {
@@ -71,7 +80,7 @@ const rulesSlice = createSlice({
       })
       .addCase(fetchRules.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Failed to fetch rules';
+        state.error = action.error.message || "Failed to fetch rules";
       })
       .addCase(createRule.fulfilled, (state, action) => {
         state.rules.push(action.payload);
@@ -89,4 +98,3 @@ const rulesSlice = createSlice({
 });
 
 export default rulesSlice.reducer;
-

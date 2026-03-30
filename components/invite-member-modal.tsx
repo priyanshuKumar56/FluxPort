@@ -9,28 +9,51 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks"
 import { inviteMember } from "@/lib/store/slices/workspacesSlice"
 
-export function InviteMemberModal({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
+export function InviteMemberModal({
+  open,
+  onOpenChange,
+  onInvite,
+  loading: externalLoading
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onInvite?: (email: string, role: string) => Promise<void>
+  loading?: boolean
+}) {
   const [email, setEmail] = useState("")
   const [role, setRole] = useState<'admin' | 'editor' | 'viewer'>("viewer")
-  const [loading, setLoading] = useState(false)
-  
+  const [internalLoading, setInternalLoading] = useState(false)
+
   const dispatch = useAppDispatch()
   const { activeWorkspaceId } = useAppSelector(state => state.workspaces)
 
+  // Use external loading prop if provided, otherwise use internal state
+  const loading = externalLoading ?? internalLoading
+
   const handleInvite = async () => {
-    if (!email.trim() || !activeWorkspaceId) return
-    setLoading(true)
-    
+    if (!email.trim()) return
+
+    // If external handler provided, use it
+    if (onInvite) {
+      await onInvite(email, role)
+      setEmail("")
+      return
+    }
+
+    // Otherwise use internal logic
+    if (!activeWorkspaceId) return
+    setInternalLoading(true)
+
     // Simulate network request
     await new Promise(resolve => setTimeout(resolve, 500))
-    
+
     dispatch(inviteMember({
       workspaceId: activeWorkspaceId,
       email,
       role
     }))
-    
-    setLoading(false)
+
+    setInternalLoading(false)
     setEmail("")
     onOpenChange(false)
   }

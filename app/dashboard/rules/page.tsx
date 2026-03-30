@@ -11,17 +11,19 @@ import { fetchRules } from "@/lib/store/slices/rulesSlice"
 export default function RulesPage() {
   const dispatch = useAppDispatch()
   const { rules, loading } = useAppSelector((state) => state.rules)
+  const { activeWorkspaceId } = useAppSelector((state) => state.workspaces)
 
   useEffect(() => {
     const loadRules = async () => {
+      if (!activeWorkspaceId) return
       try {
-        await dispatch(fetchRules());
+        await dispatch(fetchRules(activeWorkspaceId));
       } catch (error) {
         console.error('Failed to load rules:', error);
       }
     };
     loadRules();
-  }, [dispatch])
+  }, [dispatch, activeWorkspaceId])
 
   return (
     <div className="flex flex-col gap-6 p-8">

@@ -10,26 +10,32 @@ import { createWorkspace } from "@/lib/store/slices/workspacesSlice"
 
 export function CreateWorkspaceModal({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
   const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const dispatch = useAppDispatch()
   const { user } = useAppSelector((state) => state.auth)
 
   const handleCreate = async () => {
     if (!name.trim()) return
     setLoading(true)
-    
-    // Simulate network request
-    await new Promise(resolve => setTimeout(resolve, 600))
-    
-    dispatch(createWorkspace({ 
-      name, 
-      isTeam: true,
-      ownerId: user?.id || "unknown" 
-    }))
-    
-    setLoading(false)
-    setName("")
-    onOpenChange(false)
+    setError(null)
+
+    try {
+      await dispatch(createWorkspace({
+        name: name.trim(),
+        description: description.trim() || undefined,
+        is_personal: false
+      })).unwrap()
+
+      setName("")
+      setDescription("")
+      onOpenChange(false)
+    } catch (err: any) {
+      setError(err.message || 'Failed to create workspace')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -42,6 +48,11 @@ export function CreateWorkspaceModal({ open, onOpenChange }: { open: boolean, on
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          {error && (
+            <div className="text-sm text-red-500 bg-red-500/10 p-3 rounded-md">
+              {error}
+            </div>
+          )}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">
               Name
@@ -51,6 +62,21 @@ export function CreateWorkspaceModal({ open, onOpenChange }: { open: boolean, on
               placeholder="e.g. Acme Backend Team"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              className="col-span-3"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreate()
+              }}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="description" className="text-right">
+              Description
+            </Label>
+            <Input
+              id="description"
+              placeholder="Optional description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               className="col-span-3"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCreate()
