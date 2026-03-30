@@ -48,9 +48,15 @@ export const fetchWorkspaceSettings = createAsyncThunk(
   async (workspaceId: string) => {
     try {
       const settings = await apiClient.getWorkspaceSettings(workspaceId);
+      console.log("Fetched workspace settings:", settings);
       return settings || {};
     } catch (error) {
       console.error("Failed to fetch settings:", error);
+      // If it's a 404 for missing settings, return empty object
+      if (error?.message?.includes("Setting not found") || error?.message?.includes("404")) {
+        console.log("No settings found, returning empty object");
+        return {};
+      }
       return {};
     }
   },

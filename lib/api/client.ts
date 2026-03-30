@@ -55,7 +55,15 @@ class ApiClient {
       const error = await response
         .json()
         .catch(() => ({ error: "Network error" }));
-      throw new Error(error.error || `HTTP error! status: ${response.status}`);
+      
+      console.log("API Error Response:", {
+        status: response.status,
+        statusText: response.statusText,
+        url: url,
+        error: error
+      });
+      
+      throw new Error(error?.error || error?.message || `HTTP error! status: ${response.status}`);
     }
 
     return response.json();
