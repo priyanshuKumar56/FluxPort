@@ -119,18 +119,15 @@ export const createFolder = createAsyncThunk(
   async ({
     collectionId,
     name,
-    description,
     parent_folder_id,
   }: {
     collectionId: string;
     name: string;
-    description?: string;
     parent_folder_id?: string;
   }) => {
     return await apiClient.createFolder(
       collectionId,
       name,
-      description,
       parent_folder_id,
     );
   },

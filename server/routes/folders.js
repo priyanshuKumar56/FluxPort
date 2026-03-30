@@ -60,7 +60,7 @@ router.post("/", authenticateToken, async (req, res) => {
     const result = await pool.query(
       `INSERT INTO folders (collection_id, name)
        VALUES ($1, $2) RETURNING *`,
-      [collectionId, name, req.user.userId],
+      [collectionId, name],
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {

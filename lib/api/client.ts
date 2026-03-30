@@ -132,7 +132,10 @@ class ApiClient {
   }
 
   // API Logs
-  async getApiLogs(limit = 100, offset = 0) {
+  async getApiLogs(workspaceId?: string, limit = 100, offset = 0) {
+    if (workspaceId) {
+      return this.request<any[]>(`/api-logs/workspace/${workspaceId}?limit=${limit}&offset=${offset}`);
+    }
     return this.request<any[]>(`/api-logs?limit=${limit}&offset=${offset}`);
   }
 
@@ -141,6 +144,7 @@ class ApiClient {
     requestMethod: string;
     responseStatus: number;
     latencyMs: number;
+    workspaceId: string;
   }) {
     return this.request<any>("/api-logs", {
       method: "POST",
@@ -461,24 +465,23 @@ class ApiClient {
   async createFolder(
     collectionId: string,
     name: string,
-    description?: string,
     parent_folder_id?: string,
   ) {
-    return this.request<any>(`/collections/${collectionId}/folders`, {
+    return this.request<any>("/folders", {
       method: "POST",
-      body: JSON.stringify({ name, description, parent_folder_id }),
+      body: JSON.stringify({ name, collectionId, parent_folder_id }),
     });
   }
 
-  async updateFolder(id: string, name?: string, description?: string) {
-    return this.request<any>(`/collections/folders/${id}`, {
+  async updateFolder(id: string, name: string) {
+    return this.request<any>(`/folders/${id}`, {
       method: "PUT",
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify({ name }),
     });
   }
 
   async deleteFolder(id: string) {
-    return this.request<void>(`/collections/folders/${id}`, {
+    return this.request<void>(`/folders/${id}`, {
       method: "DELETE",
     });
   }

@@ -86,7 +86,6 @@ router.post("/workspace/:workspaceId", authenticateToken, async (req, res) => {
 router.get("/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("Checking collection access for ID:", id, "User:", req.user.userId);
 
     const result = await pool.query(
       `SELECT c.id, c.name, c.workspace_id, wm.role as user_role
@@ -97,11 +96,9 @@ router.get("/:id", authenticateToken, async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      console.log("Collection not found or access denied for:", id);
       return res.status(404).json({ error: "Collection not found or access denied" });
     }
 
-    console.log("Collection access OK:", result.rows[0]);
     res.json(result.rows[0]);
   } catch (error) {
     console.error("Check collection error:", error);
@@ -113,7 +110,6 @@ router.get("/:id", authenticateToken, async (req, res) => {
 router.get("/:id/tree", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("Fetching collection tree for ID:", id, "User:", req.user.userId);
 
     // Get collection with workspace check
     const collectionResult = await pool.query(
@@ -124,20 +120,16 @@ router.get("/:id/tree", authenticateToken, async (req, res) => {
       [id, req.user.userId],
     );
     
-    console.log("Collection query result:", collectionResult.rows.length, "rows");
 
     if (collectionResult.rows.length === 0) {
-      console.log("Collection not found or access denied for:", id);
       return res
         .status(404)
         .json({ error: "Collection not found or access denied" });
     }
 
     const collection = collectionResult.rows[0];
-    console.log("Found collection:", collection.name);
 
     // Get folders
-    console.log("Fetching folders for collection:", id);
     const foldersResult = await pool.query(
       `SELECT f.*
        FROM folders f
@@ -146,10 +138,8 @@ router.get("/:id/tree", authenticateToken, async (req, res) => {
       [id],
     );
     
-    console.log("Folders query result:", foldersResult.rows.length, "rows");
 
     // Get requests (both in collection root and in folders)
-    console.log("Fetching requests for collection:", id);
     const requestsResult = await pool.query(
       `SELECT sr.*, u.email as created_by_email
        FROM saved_requests sr
@@ -159,13 +149,11 @@ router.get("/:id/tree", authenticateToken, async (req, res) => {
       [id],
     );
     
-    console.log("Requests query result:", requestsResult.rows.length, "rows");
 
     // Build tree structure
     const folders = foldersResult.rows;
     const requests = requestsResult.rows;
     
-    console.log("Building tree structure with", folders.length, "folders and", requests.length, "requests");
 
     // Group requests by folder
     const folderMap = new Map();
@@ -319,17 +307,23 @@ router.put("/folders/:id", authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { name } = req.body;
 
-    const result = await pool.query(
-      `UPDATE folders 
-       SET name = COALESCE($1, name), 
-           updated_at = NOW() 
-       WHERE id = $2 RETURNING *`,
-      [name, id],
+    // Verify folder access through workspace
+    const folderCheck = await pool.query(
+      `SELECT f.id FROM folders f 
+       JOIN collections c ON f.collection_id = c.id 
+       JOIN workspace_members wm ON c.workspace_id = wm.workspace_id
+       WHERE f.id = $1 AND wm.user_id = $2 AND wm.status = 'active'`,
+      [id, req.user.userId],
     );
 
-    if (result.rows.length === 0) {
+    if (folderCheck.rows.length === 0) {
       return res.status(404).json({ error: "Folder not found" });
     }
+
+    const result = await pool.query(
+      "UPDATE folders SET name = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
+      [name, id],
+    );
 
     res.json(result.rows[0]);
   } catch (error) {
@@ -342,6 +336,20 @@ router.put("/folders/:id", authenticateToken, async (req, res) => {
 router.delete("/folders/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Verify folder access through workspace
+    const folderCheck = await pool.query(
+      `SELECT f.id FROM folders f 
+       JOIN collections c ON f.collection_id = c.id 
+       JOIN workspace_members wm ON c.workspace_id = wm.workspace_id
+       WHERE f.id = $1 AND wm.user_id = $2 AND wm.status = 'active'`,
+      [id, req.user.userId],
+    );
+
+    if (folderCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Folder not found" });
+    }
+
     await pool.query("DELETE FROM folders WHERE id = $1", [id]);
     res.json({ message: "Folder deleted" });
   } catch (error) {
@@ -431,6 +439,19 @@ router.put("/requests/:id", authenticateToken, async (req, res) => {
       auth,
     } = req.body;
 
+    // Verify request access through workspace
+    const requestCheck = await pool.query(
+      `SELECT sr.id FROM saved_requests sr 
+       JOIN collections c ON sr.collection_id = c.id 
+       JOIN workspace_members wm ON c.workspace_id = wm.workspace_id
+       WHERE sr.id = $1 AND wm.user_id = $2 AND wm.status = 'active'`,
+      [id, req.user.userId],
+    );
+
+    if (requestCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Request not found" });
+    }
+
     const result = await pool.query(
       `UPDATE saved_requests 
        SET name = COALESCE($1, name),
@@ -454,10 +475,6 @@ router.put("/requests/:id", authenticateToken, async (req, res) => {
       ],
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Request not found" });
-    }
-
     res.json(result.rows[0]);
   } catch (error) {
     console.error("Update request error:", error);
@@ -469,6 +486,20 @@ router.put("/requests/:id", authenticateToken, async (req, res) => {
 router.delete("/requests/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Verify request access through workspace
+    const requestCheck = await pool.query(
+      `SELECT sr.id FROM saved_requests sr 
+       JOIN collections c ON sr.collection_id = c.id 
+       JOIN workspace_members wm ON c.workspace_id = wm.workspace_id
+       WHERE sr.id = $1 AND wm.user_id = $2 AND wm.status = 'active'`,
+      [id, req.user.userId],
+    );
+
+    if (requestCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Request not found" });
+    }
+
     await pool.query("DELETE FROM saved_requests WHERE id = $1", [id]);
     res.json({ message: "Request deleted" });
   } catch (error) {

@@ -4,6 +4,7 @@ import { apiClient } from '@/lib/api/client';
 interface ApiLog {
   id: string;
   user_id: string;
+  workspace_id?: string;
   requestUrl: string;
   requestMethod: string;
   responseStatus: number;
@@ -31,9 +32,17 @@ const initialState: LogsState = {
 
 export const fetchLogs = createAsyncThunk(
   'logs/fetchAll',
-  async ({ limit = 100, offset = 0 }: { limit?: number; offset?: number } = {}) => {
+  async ({ 
+    limit = 100, 
+    offset = 0, 
+    workspaceId 
+  }: { 
+    limit?: number; 
+    offset?: number; 
+    workspaceId?: string;
+  } = {}) => {
     try {
-      const logs = await apiClient.getApiLogs(limit, offset);
+      const logs = await apiClient.getApiLogs(workspaceId, limit, offset);
       return logs || [];
     } catch (error) {
       console.error('Failed to fetch logs:', error);
@@ -49,6 +58,7 @@ export const createLog = createAsyncThunk(
     requestMethod: string;
     responseStatus: number;
     latencyMs: number;
+    workspaceId: string;
   }) => {
     return await apiClient.createApiLog(data);
   }

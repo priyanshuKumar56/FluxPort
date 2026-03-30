@@ -60,16 +60,18 @@ router.post("/", authenticateToken, async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO saved_requests (collection_id, folder_id, name, method, url, headers, body, created_by) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      `INSERT INTO saved_requests (collection_id, folder_id, name, method, url, headers, body, params, auth, created_by) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [
         collectionId,
         folderId || null,
         name,
         method,
         url,
-        headers ? JSON.stringify(headers) : null,
+        headers ? JSON.stringify(headers) : '{}',
         body || null,
+        params ? JSON.stringify(params) : '{}',
+        auth ? JSON.stringify(auth) : '{}',
         req.user.userId,
       ],
     );
@@ -103,8 +105,8 @@ router.put("/:id", authenticateToken, async (req, res) => {
       `UPDATE saved_requests 
        SET name = COALESCE($1, name), method = COALESCE($2, method), url = COALESCE($3, url), 
            folder_id = COALESCE($4, folder_id), headers = COALESCE($5, headers), 
-           body = COALESCE($6, body), updated_at = NOW() 
-       WHERE id = $7 RETURNING *`,
+           body = COALESCE($6, body), params = COALESCE($7, params), auth = COALESCE($8, auth), updated_at = NOW() 
+       WHERE id = $9 RETURNING *`,
       [
         name,
         method,
@@ -112,6 +114,8 @@ router.put("/:id", authenticateToken, async (req, res) => {
         folderId || null,
         headers ? JSON.stringify(headers) : null,
         body || null,
+        params ? JSON.stringify(params) : null,
+        auth ? JSON.stringify(auth) : null,
         id,
       ],
     );

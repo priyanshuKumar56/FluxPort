@@ -10,17 +10,18 @@ import { formatDistanceToNow } from "date-fns"
 export function LogsTable() {
   const dispatch = useAppDispatch()
   const { logs, loading } = useAppSelector((state) => state.logs)
+  const { activeWorkspaceId } = useAppSelector((state) => state.workspaces)
 
   useEffect(() => {
-    dispatch(fetchLogs({ limit: 50 }))
+    dispatch(fetchLogs({ limit: 50, workspaceId: activeWorkspaceId || undefined }))
     
     // Poll for updates every 5 seconds
     const interval = setInterval(() => {
-      dispatch(fetchLogs({ limit: 50 }))
+      dispatch(fetchLogs({ limit: 50, workspaceId: activeWorkspaceId || undefined }))
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [dispatch])
+  }, [dispatch, activeWorkspaceId])
 
   if (loading && logs.length === 0) {
     return <div className="text-sm text-muted-foreground animate-pulse">Loading real-time logs...</div>

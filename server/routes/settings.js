@@ -36,7 +36,6 @@ router.get("/workspace/:workspaceId", authenticateToken, async (req, res) => {
       settings[row.key] = row.value;
     });
 
-    console.log("Returning workspace settings:", Object.keys(settings).length, "settings for workspace:", workspaceId);
     res.json(settings);
   } catch (error) {
     console.error("Get workspace settings error:", error);
@@ -51,7 +50,6 @@ router.get(
   async (req, res) => {
     try {
       const { workspaceId, key } = req.params;
-      console.log("Fetching specific setting:", { workspaceId, key, user: req.user.userId });
 
       // Check access
       const accessCheck = await pool.query(
@@ -61,7 +59,6 @@ router.get(
       );
 
       if (accessCheck.rows.length === 0) {
-        console.log("Access denied for workspace:", workspaceId);
         return res.status(404).json({ error: "Workspace not found" });
       }
 
@@ -70,14 +67,10 @@ router.get(
         [workspaceId, key],
       );
 
-      console.log("Setting query result:", { rows: result.rows.length, workspaceId, key });
-
       if (result.rows.length === 0) {
-        console.log("Setting not found:", { workspaceId, key });
         return res.status(404).json({ error: "Setting not found" });
       }
 
-      console.log("Returning setting value for", key);
       res.json(result.rows[0].value);
     } catch (error) {
       console.error("Get setting error:", error);
