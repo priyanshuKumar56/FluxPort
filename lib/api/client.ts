@@ -58,6 +58,39 @@ class ApiClient {
     return response.json();
   }
 
+  /**
+   * Triggers a 'wake up' call to the backend to eliminate cold start latency.
+   * Called automatically when users land on the home page.
+   */
+  async wakeUp() {
+    try {
+      if (typeof window === "undefined") return null;
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 2500);
+      try {
+        // Prefer CORS-enabled request (lets the backend run health + DB ping).
+        return await fetch(`${this.baseUrl}/health`, {
+          method: "GET",
+          mode: "cors",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+      } catch {
+        // Fallback: still trigger the request even if response can't be read.
+        return await fetch(`${this.baseUrl}/health`, {
+          method: "GET",
+          mode: "no-cors",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    } catch {
+      return null;
+    }
+  }
+
   // Auth
   async login(email: string, password: string) {
     const data = await this.request<{ user: any; token: string }>('/auth/login', {
