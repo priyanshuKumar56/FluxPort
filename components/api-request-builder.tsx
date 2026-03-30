@@ -41,12 +41,36 @@ export function ApiRequestBuilder({
   const [assertions, setAssertions] = useState<any[]>([])
   const [isCopied, setIsCopied] = useState(false)
 
-  const [params, setParams] = useState<KeyValuePair[]>(
-    initialData?.params || [{ id: "1", key: "", value: "", enabled: true }],
-  )
-  const [headers, setHeaders] = useState<KeyValuePair[]>(
-    initialData?.headers || [{ id: "1", key: "", value: "", enabled: true }],
-  )
+  const [params, setParams] = useState<KeyValuePair[]>(() => {
+    const initialParams = initialData?.params;
+    if (Array.isArray(initialParams)) {
+      return initialParams;
+    } else if (typeof initialParams === 'object' && initialParams !== null) {
+      // Convert object to KeyValuePair array
+      return Object.entries(initialParams).map(([key, value], index) => ({
+        id: String(index + 1),
+        key,
+        value: String(value),
+        enabled: true
+      }));
+    }
+    return [{ id: "1", key: "", value: "", enabled: true }];
+  })
+  const [headers, setHeaders] = useState<KeyValuePair[]>(() => {
+    const initialHeaders = initialData?.headers;
+    if (Array.isArray(initialHeaders)) {
+      return initialHeaders;
+    } else if (typeof initialHeaders === 'object' && initialHeaders !== null) {
+      // Convert object to KeyValuePair array
+      return Object.entries(initialHeaders).map(([key, value], index) => ({
+        id: String(index + 1),
+        key,
+        value: String(value),
+        enabled: true
+      }));
+    }
+    return [{ id: "1", key: "", value: "", enabled: true }];
+  })
   const [authType, setAuthType] = useState<AuthType>(initialData?.authType || "none")
   const [authData, setAuthData] = useState<any>(initialData?.authData || {})
   const [body, setBody] = useState(initialData?.body || "")
