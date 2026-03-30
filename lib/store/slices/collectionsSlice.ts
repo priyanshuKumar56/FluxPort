@@ -30,9 +30,8 @@ interface SavedRequest {
   folder_id?: string;
   headers?: any;
   body?: string;
-  query_params?: any;
-  auth_type?: string;
-  auth_config?: any;
+  params?: any;
+  auth?: any;
 }
 
 interface CollectionsState {

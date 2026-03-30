@@ -3,7 +3,7 @@ import { apiClient } from '@/lib/api/client';
 
 interface ApiLog {
   id: string;
-  userId: string;
+  user_id: string;
   requestUrl: string;
   requestMethod: string;
   responseStatus: number;

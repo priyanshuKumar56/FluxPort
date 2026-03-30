@@ -22,9 +22,8 @@ router.get("/collection/:collectionId", authenticateToken, async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT f.*, u.email as created_by_email
+      `SELECT f.*
        FROM folders f
-       LEFT JOIN users u ON f.created_by = u.id
        WHERE f.collection_id = $1
        ORDER BY f.created_at DESC`,
       [collectionId],
@@ -59,8 +58,8 @@ router.post("/", authenticateToken, async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO folders (collection_id, name, created_by)
-       VALUES ($1, $2, $3) RETURNING *`,
+      `INSERT INTO folders (collection_id, name)
+       VALUES ($1, $2) RETURNING *`,
       [collectionId, name, req.user.userId],
     );
     res.status(201).json(result.rows[0]);

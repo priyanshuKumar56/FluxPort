@@ -21,7 +21,11 @@ router.get("/workspace/:workspaceId", authenticateToken, async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT ir.*, u.email as created_by_email, u.full_name as created_by_name
+      `SELECT ir.id, ir.workspace_id, ir.name, ir.description, ir.type,
+              ir.match_type as "matchType", ir.match_pattern as "matchPattern",
+              ir.methods, ir.config, ir.priority, ir.is_active as "isActive",
+              ir.created_by, ir.created_at, ir.updated_at,
+              u.email as created_by_email, u.full_name as created_by_name
        FROM interceptor_rules ir
        LEFT JOIN users u ON ir.created_by = u.id
        WHERE ir.workspace_id = $1 
@@ -78,7 +82,10 @@ router.post("/workspace/:workspaceId", authenticateToken, async (req, res) => {
     const result = await pool.query(
       `INSERT INTO interceptor_rules (workspace_id, name, description, type, is_active, priority, match_type, match_pattern, methods, config, created_by) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
-       RETURNING *`,
+       RETURNING id, workspace_id, name, description, type,
+                match_type as "matchType", match_pattern as "matchPattern",
+                methods, config, priority, is_active as "isActive",
+                created_by, created_at, updated_at`,
       [
         workspaceId,
         name,
@@ -149,7 +156,10 @@ router.put("/:id", authenticateToken, async (req, res) => {
            config = COALESCE($9, config), 
            updated_at = NOW() 
        WHERE id = $10 
-       RETURNING *`,
+       RETURNING id, workspace_id, name, description, type,
+                match_type as "matchType", match_pattern as "matchPattern",
+                methods, config, priority, is_active as "isActive",
+                created_by, created_at, updated_at`,
       [
         name,
         description,

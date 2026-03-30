@@ -9,7 +9,11 @@ router.get("/", authenticateToken, async (req, res) => {
   try {
     const { limit = 100, offset = 0 } = req.query;
     const result = await pool.query(
-      "SELECT * FROM api_logs WHERE user_id = $1 ORDER BY timestamp DESC LIMIT $2 OFFSET $3",
+      `SELECT id, user_id, workspace_id,
+              request_url as "requestUrl", request_method as "requestMethod",
+              response_status as "responseStatus", latency_ms as "latencyMs",
+              timestamp
+       FROM api_logs WHERE user_id = $1 ORDER BY timestamp DESC LIMIT $2 OFFSET $3`,
       [req.user.userId, parseInt(limit), parseInt(offset)],
     );
     res.json(result.rows);
@@ -34,7 +38,11 @@ router.post("/", authenticateToken, async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO api_logs (id, user_id, request_url, request_method, response_status, latency_ms, timestamp) 
-       VALUES (uuid_generate_v4(), $1, $2, $3, $4, $5, NOW()) RETURNING *`,
+       VALUES (uuid_generate_v4(), $1, $2, $3, $4, $5, NOW()) 
+       RETURNING id, user_id,
+                request_url as "requestUrl", request_method as "requestMethod",
+                response_status as "responseStatus", latency_ms as "latencyMs",
+                timestamp`,
       [req.user.userId, requestUrl, requestMethod, responseStatus, latencyMs],
     );
     res.status(201).json(result.rows[0]);
@@ -48,7 +56,8 @@ router.post("/", authenticateToken, async (req, res) => {
 router.get("/stats", authenticateToken, async (req, res) => {
   try {
     const logsResult = await pool.query(
-      "SELECT * FROM api_logs WHERE user_id = $1 ORDER BY timestamp DESC LIMIT 1000",
+      `SELECT id, response_status, latency_ms
+       FROM api_logs WHERE user_id = $1 ORDER BY timestamp DESC LIMIT 1000`,
       [req.user.userId],
     );
     const logs = logsResult.rows;

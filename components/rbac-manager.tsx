@@ -128,7 +128,7 @@ export function RbacManager({ workspaceId }: { workspaceId: string }) {
                           <div className="w-8 h-4 rounded-t-full bg-white/70 translate-y-1" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-semibold text-sm text-white">{displayName} {m.id === user?.id && <span className="text-foreground/60 font-normal">(You)</span>}</span>
+                          <span className="font-semibold text-sm text-white">{displayName} {m.user_id === user?.id && <span className="text-foreground/60 font-normal">(You)</span>}</span>
                           <span className="text-xs text-foreground/50">{m.email}</span>
                         </div>
                       </div>

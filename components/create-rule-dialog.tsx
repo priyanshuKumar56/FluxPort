@@ -46,7 +46,7 @@ export function CreateRuleDialog({ children }: { children: React.ReactNode }) {
           name: values.name,
           description: values.description,
           type: values.type,
-          matchType: "url",
+          matchType: "contains",
           matchPattern: values.matchPattern,
           methods: values.methods === "ALL" ? null : [values.methods],
           isActive: true,

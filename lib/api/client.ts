@@ -417,6 +417,10 @@ class ApiClient {
     return this.request<any[]>(`/collections/workspace/${workspaceId}`);
   }
 
+  async getCollection(collectionId: string) {
+    return this.request<any>(`/collections/${collectionId}`);
+  }
+
   async getCollectionTree(collectionId: string) {
     return this.request<any>(`/collections/${collectionId}/tree`);
   }

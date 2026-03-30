@@ -154,6 +154,7 @@ export function ApiRequestBuilder({
             method,
             headers: activeHeaders,
             body: !isNoBodyMethod ? replaceVariables(body) : undefined,
+            workspaceId: activeWorkspaceId,
           }),
         })
       }
