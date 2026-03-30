@@ -11,7 +11,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { KeyValueTable, type KeyValuePair } from "./key-value-table"
 import { AuthSection, type AuthType } from "./auth-section"
 import { ResponsePanel } from "./response-panel"
-import { useAppDispatch } from "@/lib/store/hooks"
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks"
 import { createLog } from "@/lib/store/slices/logsSlice"
 import { cn } from "@/lib/utils"
 
@@ -60,6 +60,7 @@ interface GraphqlRequestBuilderProps {
 
 export function GraphqlRequestBuilder({ initialData, onUrlChange }: GraphqlRequestBuilderProps) {
   const dispatch = useAppDispatch()
+  const { activeWorkspaceId } = useAppSelector((state) => state.workspaces)
   const [url, setUrl] = useState(initialData?.url || "")
   const [query, setQuery] = useState(initialData?.query || "")
   const [variables, setVariables] = useState("")
@@ -169,14 +170,17 @@ export function GraphqlRequestBuilder({ initialData, onUrlChange }: GraphqlReque
         { id: 3, type: "No GraphQL errors", passed: !data?.errors },
       ])
 
-      dispatch(
-        createLog({
-          requestUrl: url,
-          requestMethod: "POST",
-          responseStatus: res.status,
-          latencyMs: duration,
-        })
-      )
+      if (activeWorkspaceId) {
+        dispatch(
+          createLog({
+            requestUrl: url,
+            requestMethod: "POST",
+            responseStatus: res.status,
+            latencyMs: duration,
+            workspaceId: activeWorkspaceId,
+          })
+        )
+      }
     } catch (err: any) {
       setResponse({
         error: err.message || "Network Error",

@@ -76,7 +76,7 @@ export async function matchAndExecuteRule(request: Request, rules: InterceptorRu
   }
 }
 
-export async function proxyRequest(request: Request) {
+export async function proxyRequest(request: Request, workspaceId?: string) {
   // Get token from request headers
   const authHeader = request.headers.get('authorization')
   if (!authHeader) {
@@ -108,8 +108,10 @@ export async function proxyRequest(request: Request) {
   // Fetch active rules
   let rules: InterceptorRule[] = []
   try {
-    const allRules = await apiClient.getInterceptorRules()
-    rules = allRules.filter(r => r.isActive)
+    if (workspaceId) {
+      const allRules = await apiClient.getInterceptorRules(workspaceId)
+      rules = allRules.filter(r => r.isActive)
+    }
   } catch (error) {
     console.error('Failed to fetch rules:', error)
   }
@@ -144,12 +146,15 @@ export async function proxyRequest(request: Request) {
 
     // Async log the request
     try {
-      await apiClient.createApiLog({
-        requestUrl: request.url,
-        requestMethod: request.method,
-        responseStatus: response.status,
-        latencyMs: latency,
-      })
+      if (workspaceId) {
+        await apiClient.createApiLog({
+          requestUrl: request.url,
+          requestMethod: request.method,
+          responseStatus: response.status,
+          latencyMs: latency,
+          workspaceId,
+        })
+      }
     } catch (error) {
       console.error('Failed to log request:', error)
     }

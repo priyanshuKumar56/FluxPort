@@ -4,7 +4,7 @@ import { apiClient } from '@/lib/api/client';
 interface User {
   id: string;
   email: string;
-  createdAt?: string;
+  created_at?: string;
 }
 
 interface AuthState {

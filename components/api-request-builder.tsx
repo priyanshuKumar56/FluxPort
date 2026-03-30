@@ -154,6 +154,7 @@ export function ApiRequestBuilder({
             method,
             headers: activeHeaders,
             body: !isNoBodyMethod ? replaceVariables(body) : undefined,
+            workspaceId: activeWorkspaceId,
           }),
         })
       }
@@ -208,12 +209,15 @@ export function ApiRequestBuilder({
         { id: 3, type: "Content-Type is JSON", passed: contentType.includes("json") },
       ])
 
-      dispatch(createLog({
-        requestUrl: urlObj.toString(),
-        requestMethod: method,
-        responseStatus: res.status,
-        latencyMs: duration,
-      }))
+      if (activeWorkspaceId) {
+        dispatch(createLog({
+          requestUrl: urlObj.toString(),
+          requestMethod: method,
+          responseStatus: res.status,
+          latencyMs: duration,
+          workspaceId: activeWorkspaceId,
+        }))
+      }
 
     } catch (err: any) {
       setResponse({

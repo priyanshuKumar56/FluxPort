@@ -205,13 +205,14 @@ export async function proxyRequest(
     }
 
     // Log the request asynchronously
-    if (authHeader) {
+    if (authHeader && workspaceId) {
       apiClient
         .createApiLog({
           requestUrl: targetUrl,
           requestMethod: request.method,
           responseStatus: response.status,
           latencyMs: latency,
+          workspaceId,
         })
         .catch((error) => {
           console.error("Failed to log request:", error);

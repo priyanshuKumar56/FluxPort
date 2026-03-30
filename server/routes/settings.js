@@ -30,7 +30,7 @@ router.get("/workspace/:workspaceId", authenticateToken, async (req, res) => {
       [workspaceId],
     );
 
-    // Convert to object
+    // Convert to object - return empty object if no settings exist
     const settings = {};
     result.rows.forEach((row) => {
       settings[row.key] = row.value;

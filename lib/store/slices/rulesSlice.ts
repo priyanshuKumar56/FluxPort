@@ -3,7 +3,7 @@ import { apiClient } from "@/lib/api/client";
 
 interface InterceptorRule {
   id: string;
-  userId: string;
+  workspace_id: string;
   name: string;
   description?: string;
   type: string;
@@ -13,8 +13,9 @@ interface InterceptorRule {
   matchPattern: string;
   methods?: string[];
   config?: any;
-  createdAt: string;
-  updatedAt: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface RulesState {

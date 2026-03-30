@@ -99,7 +99,16 @@ export function RequestHistorySidebar({
     const structured = await Promise.all(
       collections.map(async (col) => {
         try {
+          // First test if collection exists and user has access
+          console.log("Testing collection access for:", col.id);
+          const collection = await apiClient.getCollection(col.id);
+          console.log("Collection access OK:", collection);
+          
+          // Then get the tree structure
+          console.log("Fetching tree for collection:", col.id);
           const tree = await apiClient.getCollectionTree(col.id);
+          console.log("Tree fetched successfully:", tree);
+          
           return {
             ...col,
             items: [
@@ -109,6 +118,12 @@ export function RequestHistorySidebar({
           };
         } catch (err) {
           console.error("Failed to map structure for collection", col.id, err);
+          const error = err as any;
+          console.error("Error details:", {
+            message: error?.message || 'Unknown error',
+            status: error?.status,
+            response: error?.response
+          });
           return { ...col, items: [] };
         }
       })
