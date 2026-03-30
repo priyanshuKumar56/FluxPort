@@ -1,11 +1,11 @@
-import express from 'express';
-import pool from '../db/index.js';
-import { authenticateToken } from '../middleware/auth.js';
+import express from "express";
+import pool from "../db/index.js";
+import { authenticateToken } from "../middleware/auth.js";
 
 const router = express.Router();
 
 // Get folders for a collection
-router.get('/collection/:collectionId', authenticateToken, async (req, res) => {
+router.get("/collection/:collectionId", authenticateToken, async (req, res) => {
   try {
     const { collectionId } = req.params;
 
@@ -14,11 +14,11 @@ router.get('/collection/:collectionId', authenticateToken, async (req, res) => {
       `SELECT c.id FROM collections c
        JOIN workspace_members wm ON c.workspace_id = wm.workspace_id
        WHERE c.id = $1 AND wm.user_id = $2 AND wm.status = 'active'`,
-      [collectionId, req.user.userId]
+      [collectionId, req.user.userId],
     );
 
     if (collectionCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Collection not found' });
+      return res.status(404).json({ error: "Collection not found" });
     }
 
     const result = await pool.query(
@@ -27,21 +27,23 @@ router.get('/collection/:collectionId', authenticateToken, async (req, res) => {
        LEFT JOIN users u ON f.created_by = u.id
        WHERE f.collection_id = $1
        ORDER BY f.created_at DESC`,
-      [collectionId]
+      [collectionId],
     );
     res.json(result.rows);
   } catch (error) {
-    console.error('Get folders error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Get folders error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // Create folder
-router.post('/', authenticateToken, async (req, res) => {
+router.post("/", authenticateToken, async (req, res) => {
   try {
     const { name, collectionId } = req.body;
     if (!name || !collectionId) {
-      return res.status(400).json({ error: 'Name and collectionId are required' });
+      return res
+        .status(400)
+        .json({ error: "Name and collectionId are required" });
     }
 
     // Verify collection access
@@ -49,27 +51,27 @@ router.post('/', authenticateToken, async (req, res) => {
       `SELECT c.id FROM collections c
        JOIN workspace_members wm ON c.workspace_id = wm.workspace_id
        WHERE c.id = $1 AND wm.user_id = $2 AND wm.status = 'active'`,
-      [collectionId, req.user.userId]
+      [collectionId, req.user.userId],
     );
 
     if (collectionCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Collection not found' });
+      return res.status(404).json({ error: "Collection not found" });
     }
 
     const result = await pool.query(
       `INSERT INTO folders (collection_id, name, created_by)
        VALUES ($1, $2, $3) RETURNING *`,
-      [collectionId, name, req.user.userId]
+      [collectionId, name, req.user.userId],
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Create folder error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Create folder error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // Update folder
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put("/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { name } = req.body;
@@ -80,27 +82,27 @@ router.put('/:id', authenticateToken, async (req, res) => {
        JOIN collections c ON f.collection_id = c.id 
        JOIN workspace_members wm ON c.workspace_id = wm.workspace_id
        WHERE f.id = $1 AND wm.user_id = $2 AND wm.status = 'active'`,
-      [id, req.user.userId]
+      [id, req.user.userId],
     );
 
     if (folderCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Folder not found' });
+      return res.status(404).json({ error: "Folder not found" });
     }
 
     const result = await pool.query(
-      'UPDATE folders SET name = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
-      [name, id]
+      "UPDATE folders SET name = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
+      [name, id],
     );
 
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Update folder error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Update folder error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // Delete folder
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete("/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -110,20 +112,19 @@ router.delete('/:id', authenticateToken, async (req, res) => {
        JOIN collections c ON f.collection_id = c.id 
        JOIN workspace_members wm ON c.workspace_id = wm.workspace_id
        WHERE f.id = $1 AND wm.user_id = $2 AND wm.status = 'active'`,
-      [id, req.user.userId]
+      [id, req.user.userId],
     );
 
     if (folderCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Folder not found' });
+      return res.status(404).json({ error: "Folder not found" });
     }
 
-    await pool.query('DELETE FROM folders WHERE id = $1', [id]);
-    res.json({ message: 'Folder deleted' });
+    await pool.query("DELETE FROM folders WHERE id = $1", [id]);
+    res.json({ message: "Folder deleted" });
   } catch (error) {
-    console.error('Delete folder error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Delete folder error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
 export default router;
-
