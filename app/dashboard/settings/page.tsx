@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RbacManager } from "@/components/rbac-manager"
 import { EnvVarsManager } from "@/components/env-vars-manager"
+import { InvitationsManager } from "@/components/invitations-manager"
 import { ApiKeysManager } from "@/components/api-keys-manager"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks"
@@ -37,8 +38,8 @@ export default function SettingsPage() {
       const loadData = async () => {
         try {
           await Promise.all([
-            dispatch(fetchLogs({ limit: 1000 })),
-            dispatch(fetchStats()),
+            dispatch(fetchLogs({ limit: 1000, workspaceId: activeWorkspace.id })),
+            dispatch(fetchStats(activeWorkspace.id)),
             dispatch(fetchRules(activeWorkspace.id)),
             dispatch(fetchWorkspaceMembers(activeWorkspace.id)),
             dispatch(fetchEnvVars({ workspaceId: activeWorkspace.id })),
@@ -55,7 +56,7 @@ export default function SettingsPage() {
 
   if (!user) return null
 
-  const clientLogs = logs?.filter((l) => !l.requestUrl.includes("/api/proxy")) || []
+  const clientLogs = logs?.filter((l) => !l.requestUrl?.includes("/api/proxy")) || []
 
   const dashboardStats = {
     totalRequests: logs?.length || 0,
@@ -85,13 +86,19 @@ export default function SettingsPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="team" className="w-full">
+      <Tabs defaultValue="general" className="w-full">
         <TabsList className="bg-transparent border-b border-white/5 rounded-none w-full justify-start h-auto p-0 mb-6 gap-6 overflow-x-auto">
           <TabsTrigger
             value="team"
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#3b82f6] data-[state=active]:bg-transparent data-[state=active]:text-[#3b82f6] text-foreground/70 px-0 py-3 shadow-none font-medium whitespace-nowrap text-sm transition-colors"
           >
             Members
+          </TabsTrigger>
+          <TabsTrigger
+            value="invitations"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#3b82f6] data-[state=active]:bg-transparent data-[state=active]:text-[#3b82f6] text-foreground/70 px-0 py-3 shadow-none font-medium whitespace-nowrap text-sm transition-colors"
+          >
+            Invitations
           </TabsTrigger>
           <TabsTrigger
             value="general"
@@ -311,6 +318,14 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
+        <TabsContent value="team" className="space-y-6">
+          <RbacManager workspaceId={activeWorkspace?.id || ''} />
+        </TabsContent>
+
+        <TabsContent value="invitations" className="space-y-6">
+          <InvitationsManager workspaceId={activeWorkspace?.id || ''} />
+        </TabsContent>
+
         <TabsContent value="general" className="space-y-6">
           <Card className="border-border">
             <CardHeader>
@@ -321,7 +336,7 @@ export default function SettingsPage() {
               <div className="flex gap-4">
                 <input
                   className="flex-1 bg-input/50 border border-border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none focus:border-primary/50"
-                  defaultValue="My API Gateway"
+                  defaultValue={activeWorkspace?.name || 'My API Gateway'}
                 />
                 <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-semibold hover:bg-primary/90 transition-colors">
                   Save
@@ -344,15 +359,11 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="team">
-          <RbacManager workspaceId={activeWorkspace?.id || ''} />
-        </TabsContent>
-
-        <TabsContent value="env">
+        <TabsContent value="env" className="space-y-6">
           <EnvVarsManager workspaceId={activeWorkspace?.id || ''} />
         </TabsContent>
 
-        <TabsContent value="api-keys">
+        <TabsContent value="api-keys" className="space-y-6">
           <ApiKeysManager workspaceId={activeWorkspace?.id || ''} />
         </TabsContent>
       </Tabs>

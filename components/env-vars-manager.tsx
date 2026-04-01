@@ -10,14 +10,13 @@ import { useAppSelector, useAppDispatch } from "@/lib/store/hooks"
 import { createEnvVar, deleteEnvVar } from "@/lib/store/slices/settingsSlice"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export function EnvVarsManager({ workspaceId }: { workspaceId: string }) {
   const dispatch = useAppDispatch()
   const { envVars, loading } = useAppSelector((state) => state.settings)
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set())
   const [isAddOpen, setIsAddOpen] = useState(false)
-  const [newVar, setNewVar] = useState({ name: '', key: '', value: '', environment: 'default', is_encrypted: true })
+  const [newVar, setNewVar] = useState({ name: '', key: '', value: '', is_encrypted: true })
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const toggleVisibility = (id: string) => {
@@ -41,7 +40,7 @@ export function EnvVarsManager({ workspaceId }: { workspaceId: string }) {
         data: newVar
       })).unwrap()
       setIsAddOpen(false)
-      setNewVar({ name: '', key: '', value: '', environment: 'default', is_encrypted: true })
+      setNewVar({ name: '', key: '', value: '', is_encrypted: true })
     } catch (error) {
       console.error('Failed to create env var:', error)
     } finally {
@@ -69,7 +68,7 @@ export function EnvVarsManager({ workspaceId }: { workspaceId: string }) {
             <CardTitle>Environment Variables</CardTitle>
             <CardDescription>Encrypted key-value pairs for your proxy rules and automated tests.</CardDescription>
           </div>
-          <Button size="sm" className="gap-2">
+          <Button size="sm" className="gap-2" onClick={() => setIsAddOpen(true)}>
             <Plus className="h-4 w-4" /> Add Variable
           </Button>
         </CardHeader>
@@ -84,7 +83,7 @@ export function EnvVarsManager({ workspaceId }: { workspaceId: string }) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Badge variant="outline" className="bg-background font-mono text-[10px]">
-                      {v.environment}
+                      {v.key}
                     </Badge>
                     <code className="text-sm font-bold">{v.key}</code>
                   </div>
@@ -151,9 +150,9 @@ export function EnvVarsManager({ workspaceId }: { workspaceId: string }) {
               <Label htmlFor="var-name" className="text-right">Name</Label>
               <Input
                 id="var-name"
+                placeholder="e.g., Database URL"
                 value={newVar.name}
                 onChange={(e) => setNewVar({ ...newVar, name: e.target.value })}
-                placeholder="e.g. Database URL"
                 className="col-span-3"
               />
             </div>
@@ -161,9 +160,9 @@ export function EnvVarsManager({ workspaceId }: { workspaceId: string }) {
               <Label htmlFor="var-key" className="text-right">Key</Label>
               <Input
                 id="var-key"
+                placeholder="e.g., DB_HOST"
                 value={newVar.key}
-                onChange={(e) => setNewVar({ ...newVar, key: e.target.value.toUpperCase().replace(/\s+/g, '_') })}
-                placeholder="e.g. DATABASE_URL"
+                onChange={(e) => setNewVar({ ...newVar, key: e.target.value })}
                 className="col-span-3 font-mono"
               />
             </div>
@@ -171,28 +170,25 @@ export function EnvVarsManager({ workspaceId }: { workspaceId: string }) {
               <Label htmlFor="var-value" className="text-right">Value</Label>
               <Input
                 id="var-value"
+                type="password"
+                placeholder="e.g., localhost:5432"
                 value={newVar.value}
                 onChange={(e) => setNewVar({ ...newVar, value: e.target.value })}
-                placeholder="Enter value"
-                className="col-span-3"
+                className="col-span-3 font-mono"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="var-env" className="text-right">Environment</Label>
-              <Select
-                value={newVar.environment}
-                onValueChange={(value) => setNewVar({ ...newVar, environment: value })}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">Default</SelectItem>
-                  <SelectItem value="development">Development</SelectItem>
-                  <SelectItem value="staging">Staging</SelectItem>
-                  <SelectItem value="production">Production</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="var-encrypted" className="text-right">Encrypted</Label>
+              <div className="flex items-center space-x-2 h-5">
+                <input
+                  id="var-encrypted"
+                  type="checkbox"
+                  checked={newVar.is_encrypted}
+                  onChange={(e) => setNewVar({ ...newVar, is_encrypted: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm text-muted-foreground">Encrypt at rest</span>
+              </div>
             </div>
           </div>
           <DialogFooter>

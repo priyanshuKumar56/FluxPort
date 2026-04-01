@@ -62,6 +62,7 @@ export function RequestHistorySidebar({
   const dispatch = useAppDispatch()
   const { collections } = useAppSelector((state) => state.collections)
   const { logs } = useAppSelector((state) => state.logs)
+  const { activeWorkspaceId } = useAppSelector((state) => state.workspaces)
   const [structuredCollections, setStructuredCollections] = useState<Collection[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -81,8 +82,10 @@ export function RequestHistorySidebar({
     const fetchData = async () => {
       setLoading(true)
       try {
-        await dispatch(fetchCollections())
-        await dispatch(fetchLogs({ limit: 20 }))
+        if (activeWorkspaceId) {
+          await dispatch(fetchCollections(activeWorkspaceId))
+        }
+        await dispatch(fetchLogs({ limit: 20, workspaceId: activeWorkspaceId || undefined }))
       } catch (error) {
         console.error("Failed to fetch data:", error)
       } finally {
@@ -90,19 +93,38 @@ export function RequestHistorySidebar({
       }
     }
     fetchData()
-  }, [dispatch])
+  }, [dispatch, activeWorkspaceId])
 
   const structureData = async () => {
     const structured = await Promise.all(
       collections.map(async (col) => {
-        const folders = await apiClient.getFolders(col.id)
-        const reqs = await apiClient.getSavedRequests(col.id)
-        return {
-          ...col,
-          items: [
-            ...(folders?.map((f: any) => ({ ...f, type: "folder" })) || []),
-            ...(reqs?.map((r: any) => ({ ...r, type: "request" })) || []),
-          ],
+        try {
+          // First test if collection exists and user has access
+          console.log("Testing collection access for:", col.id);
+          const collection = await apiClient.getCollection(col.id);
+          console.log("Collection access OK:", collection);
+
+          // Then get the tree structure
+          console.log("Fetching tree for collection:", col.id);
+          const tree = await apiClient.getCollectionTree(col.id);
+          console.log("Tree fetched successfully:", tree);
+
+          return {
+            ...col,
+            items: [
+              ...(tree?.folders?.map((f: any) => ({ ...f, type: "folder" })) || []),
+              ...(tree?.requests?.map((r: any) => ({ ...r, type: "request" })) || []),
+            ],
+          };
+        } catch (err) {
+          console.error("Failed to map structure for collection", col.id, err);
+          const error = err as any;
+          console.error("Error details:", {
+            message: error?.message || 'Unknown error',
+            status: error?.status,
+            response: error?.response
+          });
+          return { ...col, items: [] };
         }
       })
     )
@@ -143,13 +165,19 @@ export function RequestHistorySidebar({
   const submitCreateRequest = async () => {
     if (!newRequestName || !addRequestTarget) return
     try {
-      await apiClient.createSavedRequest({
-        name: newRequestName,
-        method: newRequestType === "graphql" ? "POST" : "GET",
-        url: "",
-        collectionId: addRequestTarget.collectionId,
-        folderId: addRequestTarget.folderId || null
-      })
+      await apiClient.createSavedRequest(
+        addRequestTarget.collectionId,
+        addRequestTarget.folderId || undefined,
+        {
+          name: newRequestName,
+          method: newRequestType === "graphql" ? "POST" : "GET",
+          url: "https://api.example.com/endpoint",
+          headers: {},
+          body: null,
+          params: {},
+          auth: {},
+        }
+      )
       setIsAddRequestOpen(false)
       await refreshStructure()
     } catch (err) {
@@ -160,7 +188,7 @@ export function RequestHistorySidebar({
   const submitCreateFolder = async () => {
     if (!newFolderName || !addFolderTarget) return
     try {
-      await apiClient.createFolder(newFolderName, addFolderTarget.collectionId)
+      await apiClient.createFolder(addFolderTarget.collectionId, newFolderName)
       setIsAddFolderOpen(false)
       await refreshStructure()
     } catch (err) {
@@ -169,11 +197,15 @@ export function RequestHistorySidebar({
   }
 
   const handleCreateCollection = async () => {
+    if (!activeWorkspaceId) {
+      alert("No active workspace to create a collection in");
+      return;
+    }
     const name = prompt("Enter collection name:")
     if (!name) return
     try {
-      await apiClient.createCollection(name)
-      await dispatch(fetchCollections())
+      await apiClient.createCollection(activeWorkspaceId, name)
+      await dispatch(fetchCollections(activeWorkspaceId))
     } catch (error) {
       console.error("Failed to create collection:", error)
     }
@@ -223,7 +255,7 @@ export function RequestHistorySidebar({
             <Folder className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           )}
           <span className="text-[11px] font-medium flex-1 truncate">{item.name}</span>
-          
+
           {/* Folder actions */}
           <div className="opacity-0 group-hover:opacity-100 flex items-center pr-1 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
@@ -320,7 +352,7 @@ export function RequestHistorySidebar({
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    
+
                     <AccordionContent className="pb-1 pt-0">
                       <div className="ml-2 pl-2 border-l border-border/50">
                         {collection.items?.length ? (
@@ -384,9 +416,9 @@ export function RequestHistorySidebar({
                   className="flex items-center gap-2 py-1.5 px-3 hover:bg-accent cursor-pointer transition-colors rounded mx-1 group"
                   onClick={() =>
                     onRequestSelect?.({
-                      name: log.requestUrl.split("/").pop() || "Request",
+                      name: log.requestUrl?.split("/").pop() || "Request",
                       method: log.requestMethod,
-                      url: log.requestUrl,
+                      url: log.requestUrl || "",
                     })
                   }
                 >
@@ -394,7 +426,7 @@ export function RequestHistorySidebar({
                     {log.requestMethod}
                   </span>
                   <span className="text-[11px] truncate flex-1 text-foreground/70 group-hover:text-foreground">
-                    {log.requestUrl.split("/").pop() || "Request"}
+                    {log.requestUrl?.split("/").pop() || "Request"}
                   </span>
                   <Badge
                     variant={log.responseStatus < 400 ? "default" : "destructive"}

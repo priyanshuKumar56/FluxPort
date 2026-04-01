@@ -55,7 +55,25 @@ class ApiClient {
       const error = await response
         .json()
         .catch(() => ({ error: "Network error" }));
-      throw new Error(error.error || `HTTP error! status: ${response.status}`);
+      
+      // Don't log errors for 404 on certain endpoints (empty data is expected)
+      if (response.status === 404 && (
+        endpoint.includes('/settings/') || 
+        endpoint.includes('/env') || 
+        endpoint.includes('/api-keys')
+      )) {
+        // Silently handle expected 404s for empty data
+        return [] as T;
+      }
+      
+      console.log("API Error Response:", {
+        status: response.status,
+        statusText: response.statusText,
+        url: url,
+        error: error
+      });
+      
+      throw new Error(error?.error || error?.message || `HTTP error! status: ${response.status}`);
     }
 
     return response.json();
@@ -124,7 +142,10 @@ class ApiClient {
   }
 
   // API Logs
-  async getApiLogs(limit = 100, offset = 0) {
+  async getApiLogs(workspaceId?: string, limit = 100, offset = 0) {
+    if (workspaceId) {
+      return this.request<any[]>(`/api-logs/workspace/${workspaceId}?limit=${limit}&offset=${offset}`);
+    }
     return this.request<any[]>(`/api-logs?limit=${limit}&offset=${offset}`);
   }
 
@@ -133,6 +154,7 @@ class ApiClient {
     requestMethod: string;
     responseStatus: number;
     latencyMs: number;
+    workspaceId: string;
   }) {
     return this.request<any>("/api-logs", {
       method: "POST",
@@ -140,8 +162,9 @@ class ApiClient {
     });
   }
 
-  async getApiLogStats() {
-    return this.request<any>("/api-logs/stats");
+  async getApiLogStats(workspaceId?: string) {
+    const query = workspaceId ? `?workspaceId=${workspaceId}` : "";
+    return this.request<any>(`/api-logs/stats${query}`);
   }
 
   // Proxy
@@ -295,6 +318,10 @@ class ApiClient {
     });
   }
 
+  async getWorkspaceInvitations(workspaceId: string) {
+    return this.request<any[]>(`/workspaces/${workspaceId}/invitations`);
+  }
+
   async updateMemberRole(workspaceId: string, memberId: string, role: string) {
     return this.request<any>(`/workspaces/${workspaceId}/members/${memberId}`, {
       method: "PUT",
@@ -417,6 +444,10 @@ class ApiClient {
     return this.request<any[]>(`/collections/workspace/${workspaceId}`);
   }
 
+  async getCollection(collectionId: string) {
+    return this.request<any>(`/collections/${collectionId}`);
+  }
+
   async getCollectionTree(collectionId: string) {
     return this.request<any>(`/collections/${collectionId}/tree`);
   }
@@ -449,24 +480,23 @@ class ApiClient {
   async createFolder(
     collectionId: string,
     name: string,
-    description?: string,
     parent_folder_id?: string,
   ) {
-    return this.request<any>(`/collections/${collectionId}/folders`, {
+    return this.request<any>("/folders", {
       method: "POST",
-      body: JSON.stringify({ name, description, parent_folder_id }),
+      body: JSON.stringify({ name, collectionId, parent_folder_id }),
     });
   }
 
-  async updateFolder(id: string, name?: string, description?: string) {
-    return this.request<any>(`/collections/folders/${id}`, {
+  async updateFolder(id: string, name: string) {
+    return this.request<any>(`/folders/${id}`, {
       method: "PUT",
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify({ name }),
     });
   }
 
   async deleteFolder(id: string) {
-    return this.request<void>(`/collections/folders/${id}`, {
+    return this.request<void>(`/folders/${id}`, {
       method: "DELETE",
     });
   }

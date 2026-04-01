@@ -196,6 +196,40 @@ router.get("/:id/members", authenticateToken, async (req, res) => {
   }
 });
 
+// Get workspace invitations
+router.get("/:id/invitations", authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if user has access
+    const accessCheck = await pool.query(
+      `SELECT role FROM workspace_members 
+       WHERE workspace_id = $1 AND user_id = $2 AND status = 'active'`,
+      [id, req.user.userId],
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "Workspace not found" });
+    }
+
+    const result = await pool.query(
+      `SELECT wi.*, u.email as invited_email, u.full_name as invited_name
+       FROM workspace_invitations wi
+       LEFT JOIN users u ON wi.email = u.email
+       WHERE wi.workspace_id = $1
+       ORDER BY wi.created_at DESC`,
+      [id],
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Get workspace invitations error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Invite a member by email
 router.post("/:id/invite", authenticateToken, async (req, res) => {
   try {

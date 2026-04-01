@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { ShieldCheck } from "lucide-react"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
-import { useAppDispatch } from "@/lib/store/hooks"
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks"
 import { createLog } from "@/lib/store/slices/logsSlice"
 import { apiClient } from "@/lib/api/client"
 
@@ -30,6 +30,7 @@ export function ApiRequestBuilder({
   onUrlChange?: (url: string) => void
 }) {
   const dispatch = useAppDispatch()
+  const { activeWorkspaceId } = useAppSelector((state) => state.workspaces)
 
   // State
   const [method, setMethod] = useState(initialData?.method || "GET")
@@ -40,12 +41,36 @@ export function ApiRequestBuilder({
   const [assertions, setAssertions] = useState<any[]>([])
   const [isCopied, setIsCopied] = useState(false)
 
-  const [params, setParams] = useState<KeyValuePair[]>(
-    initialData?.params || [{ id: "1", key: "", value: "", enabled: true }],
-  )
-  const [headers, setHeaders] = useState<KeyValuePair[]>(
-    initialData?.headers || [{ id: "1", key: "", value: "", enabled: true }],
-  )
+  const [params, setParams] = useState<KeyValuePair[]>(() => {
+    const initialParams = initialData?.params;
+    if (Array.isArray(initialParams)) {
+      return initialParams;
+    } else if (typeof initialParams === 'object' && initialParams !== null) {
+      // Convert object to KeyValuePair array
+      return Object.entries(initialParams).map(([key, value], index) => ({
+        id: String(index + 1),
+        key,
+        value: String(value),
+        enabled: true
+      }));
+    }
+    return [{ id: "1", key: "", value: "", enabled: true }];
+  })
+  const [headers, setHeaders] = useState<KeyValuePair[]>(() => {
+    const initialHeaders = initialData?.headers;
+    if (Array.isArray(initialHeaders)) {
+      return initialHeaders;
+    } else if (typeof initialHeaders === 'object' && initialHeaders !== null) {
+      // Convert object to KeyValuePair array
+      return Object.entries(initialHeaders).map(([key, value], index) => ({
+        id: String(index + 1),
+        key,
+        value: String(value),
+        enabled: true
+      }));
+    }
+    return [{ id: "1", key: "", value: "", enabled: true }];
+  })
   const [authType, setAuthType] = useState<AuthType>(initialData?.authType || "none")
   const [authData, setAuthData] = useState<any>(initialData?.authData || {})
   const [body, setBody] = useState(initialData?.body || "")
@@ -153,6 +178,7 @@ export function ApiRequestBuilder({
             method,
             headers: activeHeaders,
             body: !isNoBodyMethod ? replaceVariables(body) : undefined,
+            workspaceId: activeWorkspaceId,
           }),
         })
       }
@@ -207,12 +233,15 @@ export function ApiRequestBuilder({
         { id: 3, type: "Content-Type is JSON", passed: contentType.includes("json") },
       ])
 
-      dispatch(createLog({
-        requestUrl: urlObj.toString(),
-        requestMethod: method,
-        responseStatus: res.status,
-        latencyMs: duration,
-      }))
+      if (activeWorkspaceId) {
+        dispatch(createLog({
+          requestUrl: urlObj.toString(),
+          requestMethod: method,
+          responseStatus: res.status,
+          latencyMs: duration,
+          workspaceId: activeWorkspaceId,
+        }))
+      }
 
     } catch (err: any) {
       setResponse({
@@ -234,24 +263,31 @@ export function ApiRequestBuilder({
       alert("Please enter a URL first")
       return
     }
+    if (!activeWorkspaceId) {
+      alert("Please select a workspace first")
+      return
+    }
     const { urlObj, activeHeaders } = prepareRequest()
     const collectionName = prompt("Enter collection name (or leave empty for default):")
     const requestName = prompt("Enter request name:", url.split('/').pop() || "New Request")
     if (!requestName) return
 
     try {
-      const collections = await apiClient.getCollections()
+      const collections = await apiClient.getCollections(activeWorkspaceId)
       let collection = collections.find((c: any) => c.name === (collectionName || "Default"))
-      if (!collection) collection = await apiClient.createCollection(collectionName || "Default")
+      if (!collection) collection = await apiClient.createCollection(activeWorkspaceId, collectionName || "Default")
 
-      await apiClient.createSavedRequest({
-        name: requestName,
-        method,
-        url: urlObj.toString(),
-        collectionId: collection.id,
-        headers: activeHeaders,
-        body: method !== "GET" ? body : null,
-      })
+      await apiClient.createSavedRequest(
+        collection.id,
+        undefined,
+        {
+          name: requestName,
+          method,
+          url: urlObj.toString(),
+          headers: activeHeaders,
+          body: method !== "GET" ? body : null,
+        }
+      )
       alert("Request saved successfully!")
     } catch (error) {
       console.error('Failed to save request:', error)

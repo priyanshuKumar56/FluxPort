@@ -30,6 +30,7 @@ interface WorkspacesState {
   workspaces: Workspace[];
   members: WorkspaceMember[];
   activeWorkspaceId: string | null;
+  invitations: any[];
   loading: boolean;
   error: string | null;
 }
@@ -38,6 +39,7 @@ const initialState: WorkspacesState = {
   workspaces: [],
   members: [],
   activeWorkspaceId: null,
+  invitations: [],
   loading: false,
   error: null,
 };
@@ -123,6 +125,13 @@ export const acceptInvitation = createAsyncThunk(
   "workspaces/acceptInvitation",
   async (token: string) => {
     return await apiClient.acceptInvitation(token);
+  },
+);
+
+export const fetchWorkspaceInvitations = createAsyncThunk(
+  "workspaces/fetchWorkspaceInvitations",
+  async (workspaceId: string) => {
+    return await apiClient.getWorkspaceInvitations(workspaceId);
   },
 );
 
@@ -225,9 +234,25 @@ const workspacesSlice = createSlice({
       .addCase(fetchWorkspaceMembers.fulfilled, (state, action) => {
         state.members = action.payload;
       })
+      // Fetch invitations
+      .addCase(fetchWorkspaceInvitations.fulfilled, (state, action) => {
+        state.invitations = action.payload;
+      })
       // Remove member
       .addCase(removeMember.fulfilled, (state, action) => {
         state.members = state.members.filter((m) => m.id !== action.payload);
+      })
+      // Accept invitation
+      .addCase(acceptInvitation.fulfilled, (state, action) => {
+        // Refresh workspaces to get the newly added workspace
+        return {
+          ...state,
+          workspaces: [...state.workspaces, action.payload],
+          activeWorkspaceId: action.payload.id
+        };
+      })
+      .addCase(acceptInvitation.rejected, (state, action) => {
+        state.error = action.error.message || 'Failed to accept invitation';
       })
       // Leave workspace
       .addCase(leaveWorkspace.fulfilled, (state, action) => {
