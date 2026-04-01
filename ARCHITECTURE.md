@@ -1,56 +1,82 @@
-# FluxPort 2.0 - System Architecture
+# 🏗️ Architecture Design: FluxPort 2.0
 
-FluxPort 2.0 is a modern API Gateway and development platform designed for high performance and extensibility.
+**FluxPort 2.0** is an enterprise-oriented API Gateway and collaboration system. This document outlines the technical design, data flows, and architectural principles that power the platform.
 
-## System Overview
+## 🧱 High-Level Overview
 
-The project is split into a **Next.js Frontend** and an **Express.js Backend**.
-
-### High-Level Architecture
-
+```mermaid
+graph TD
+    subgraph "Client Tier"
+        Browser[User Browser]
+    end
+    
+    subgraph "Frontend Tier (Next.js 16)"
+        NextJS[Next.js App Server]
+        Redux[Redux State Engine]
+        ProxyHandler[Relay Logic]
+    end
+    
+    subgraph "Backend Tier (Express.js)"
+        API[Express CRUD API]
+        RelayEngine[Smart Relay / Interceptor]
+        Guard[Auth & Validation Guard]
+    end
+    
+    subgraph "Persistence Tier"
+        Postgres[(PostgreSQL)]
+    end
+    
+    Browser <--> NextJS
+    NextJS <--> API
+    API <--> Postgres
+    API --> RelayEngine
+    RelayEngine <--> ExternalAPI[External Service]
 ```
-[ Client Browser ] <------> [ Next.js Frontend ] 
-                                   |
-                                   v
-[ Target API Server ] <--- [ Smart Relay (Proxy) ] <--- [ Express Backend ]
-                                   |
-                                   v
-                           [ PostgreSQL DB ]
-```
 
-## Key Components
+---
 
-### 1. The Smart Relay (Proxy Engine)
-Located in `lib/proxy-engine-v2.ts`. This is the core logic that allows FluxPort to act as an interceptor. It handles:
-- **CORS Bypass**: Allows clients to reach APIs that don't have CORS enabled.
-- **Rule Evaluation**: Checks incoming requests against "Interceptor Rules" (Redirects, Mocking, Headers).
-- **Latency Simulation**: Can artificially slow down responses for testing.
-- **Header Sanitization**: Removes conflicting headers like `accept-encoding` to ensure consistent data delivery.
+## ⚡ Key Architectural Components
 
-### 2. API Client Dashboard
-Located in `app/dashboard/client`. A Postman-like interface that supports:
-- **Variable Injection**: `{{variable}}` syntax for environment-based testing.
-- **Tabbed Browsing**: Work on multiple requests simultaneously.
-- **Live Preview**: Render HTML responses directly in the dashboard.
-- **Interception Visualizers**: Clearly shows when a rule has modified a request.
+### 🔄 The Smart Relay (Proxy Engine)
+The core of FluxPort is the **Smart Relay Proxy**. Unlike a simple proxy, our engine allows for "Request Interception".
+- **Interception Logic**: Before forwarding a request, the engine checks for `InterceptorRules`.
+- **Transformation**: Dynamically modifies headers, query parameters, or body payloads based on rules.
+- **Audit**: Every request/response cycle is asynchronously logged to the `ApiLog` table for real-time analytics.
 
-### 3. Gateway Analytics
-A real-time monitoring system that logs all requests passing through the gateway, providing insights into:
-- Performance (latency metrics).
-- Reliability (status code distribution).
-- Throughput.
+### 🏢 Workspace Isolation & Multi-Tenancy
+We use a **Workspace-Centric Data Model**.
+- Every object (`Collection`, `Folder`, `SavedRequest`) belongs to a `Workspace`.
+- Access is strictly governed by the `workspace_members` table and the `status` of membership.
+- **Security Guard**: Express middleware verifies the `userId` in the JWT against the `workspace_id` for every request.
 
-## Data Model
+### 🧬 Data Schema Strategy
+Our PostgreSQL schema is designed for speed and traceability:
+- **`collections`**: Root unit for API projects.
+- **`folders`**: Recursive logical grouping for requests.
+- **`saved_requests`**: Stores full request metadata (headers, body, auth, etc.).
+- **`api_logs`**: Time-series request history for audit trails.
 
-We use **PostgreSQL** as the primary datastore:
-- **Users**: Authentication and profile management.
-- **Collections/Folders**: Organization of saved requests.
-- **InterceptorRules**: User-defined logic for the Smart Relay.
-- **ApiLogs**: Historical data for analytics.
+---
 
-## Technology Stack
+## 🚦 Data Flow Example: Saving a Request
 
-- **Frontend**: React 19, Next.js 16, Tailwind CSS, Redux Toolkit, Lucide Icons.
-- **Backend**: Express.js, TypeScript.
-- **Database**: PostgreSQL (Prisma or raw queries depending on the implementation).
-- **Interception**: Custom "Smart Relay" implementation using Fetch API.
+1. **Frontend**: The user clicks "Save" in the Request Builder.
+2. **Redux**: Validates the request data in the central state.
+3. **Dispatch**: Sends a `POST` request to `/api/saved-requests`.
+4. **Auth Guard**: Middleware verifies the JWT and workspace permissions.
+5. **Validation**: `express-validator` checks the request body schema.
+6. **DB Transaction**: The repository writes the new entry to PostgreSQL.
+7. **Broadcast**: (Optional) Socket.io broadcasts the update to other workspace members.
+
+---
+
+## 🐳 Deployment & Scaling
+We emphasize **Container-First** architecture.
+- **Production Isolation**: Next.js uses `standalone` output mode to minimize Node.js image footprints.
+- **Database Scalability**: Designed for connection pooling and row-level security for high-concurrency environments.
+
+---
+
+<p align="center">
+  Generated for the FluxPort Engineering Team. 🚦
+</p>

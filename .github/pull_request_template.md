@@ -1,30 +1,30 @@
-## Description
+## 🚀 Pull Request Checklist
 
-Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
+Before submitting this PR, please ensure you have completed the following:
 
-Fixes # (issue)
+- [ ] I have read the [CONTRIBUTING.md](CONTRIBUTING.md) guide.
+- [ ] My code follows the project's code style and linting rules.
+- [ ] I have performed a self-review of my own code.
+- [ ] I have commented my code, particularly in hard-to-understand areas.
+- [ ] I have made corresponding changes to the documentation.
+- [ ] My changes generate no new warnings or errors.
+- [ ] I have added tests that prove my fix is effective or that my feature works.
+- [ ] All tests passed locally (`npm run test`).
 
-## Type of change
+---
 
-Please delete options that are not relevant.
+## 📝 Description
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] This change requires a documentation update
+Please provide a brief description of the changes in this PR. What problem is this solving? What feature is being added?
 
-## How Has This Been Tested?
+## 🖼️ Screenshots (if applicable)
 
-Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce. Please also list any relevant details for your test configuration.
+If this PR includes UI changes, please provide screenshots or a video.
 
-- [ ] Test A
-- [ ] Test B
+## 🔗 Related Issues
 
-## Checklist:
+Is this PR related to any existing issues? If so, please link them here (e.g., `Closes #123`).
 
-- [ ] My code follows the style guidelines of this project
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings
-- [ ] Any dependent changes have been merged and published in downstream modules
+---
+
+*Thank you for your contribution to FluxPort!* 🚀

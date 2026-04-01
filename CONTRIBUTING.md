@@ -1,48 +1,87 @@
-# Contributing to FluxPort 2.0
+# 🤝 Contributing to FluxPort 2.0
 
-First off, thanks for taking the time to contribute! FluxPort 2.0 is an open-source project, and we love getting help from the community.
+First of all, thank you for considering contributing to **FluxPort 2.0**! It is people like you who make the open-source community such an amazing place to learn, inspire, and create.
 
-## How Can I Contribute?
+## 🏗️ Contribution Workflow
 
-### Reporting Bugs
-* Before creating a new issue, search the [issue tracker](https://github.com/yourusername/FluxPort_2.0/issues) to see if the problem has already been reported.
-* If you find a bug, create a new issue and include as many details as possible:
-    * Your operating system and version.
-    * Your browser and version.
-    * Steps to reproduce the bug.
-    * Expected and actual behavior.
-    * Screenshots if applicable.
+Follow this guide to get your contribution merged smoothly:
 
-### Suggesting Enhancements
-* We're always looking for ways to make FluxPort better. If you have an idea for a new feature or an improvement, please open an issue.
+```mermaid
+graph LR
+    Fork[Fork Repo] --> Branch[Create Feature Branch]
+    Branch --> Code[Build Feature / Fix Bug]
+    Code --> Test[Run Tests & Lint]
+    Test --> PR[Open Pull Request]
+    PR --> Review[Code Review]
+    Review --> Merge[Merged to Main!]
+```
 
-### Pull Requests
-1. Fork the repository and create your branch from `main`.
-2. If you've added code that should be tested, add tests.
-3. If you've changed APIs, update the documentation.
-4. Ensure the test suite passes.
-5. Make sure your code follows the existing coding style.
-6. Submit a pull request!
+---
 
-## Project Structure
+## 🛠️ Local Development Setup
 
-* `/app`: Frontend Next.js application.
-* `/server`: Backend Express.js server.
-* `/components/api-client`: Core logic for the API Client request builder.
-* `/lib/proxy-engine-v2.ts`: The "Smart Relay" logic for request interception.
+We recommend using **Docker** for the fastest setup. However, for a native setup:
 
-## Local Development
+1. **Fork and Clone**:
+   ```bash
+   git clone https://github.com/priyanshuKumar56/FluxPort.git
+   cd FluxPort
+   ```
+2. **Setup Submodules**:
+   - The project uses a root Next.js app and an `/server` Express app.
+   - Install dependencies in both root and `/server`: `npm install`.
 
-Check out the [README.md](README.md) for detailed setup instructions.
+3. **Environment**: 
+   - Copy `.env.example` to `.env` in both the root and `/server` folders.
 
-## Coding Standards
+---
 
-* We use TypeScript for both frontend and backend.
-* Use functional components and hooks in the frontend.
-* Follow the Prettier and ESLint configurations defined in the project.
+## 📐 Coding Standards
 
-## Code of Conduct
+### 🧬 Git Branching
+- `feature/name-of-feature` for new functionality.
+- `fix/name-of-bug` for bug fixes.
+- `docs/what-changed` for documentation updates.
 
-Please be respectful and helpful to all contributors. We follow the [Contributor Covenant Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md).
+### ✍️ Commit Messages
+We follow **Conventional Commits**:
+- `feat: [description]` for new features.
+- `fix: [description]` for bug fixes.
+- `chore: [description]` for maintenance tasks.
+- `docs: [description]` for documentation only.
 
-Happy coding!
+### 🛠️ Code Quality
+Before pushing, ensure these steps pass:
+```bash
+# Automated formatting
+npm run format
+
+# Static analysis
+npm run lint
+
+# Unit & Integration tests
+npm run test
+```
+
+---
+
+## 🐞 Issues & Bug Reports
+We use GitHub Issues to track bugs and enhancement requests. If you find a problem:
+1. Check if the issue [already exists](https://github.com/priyanshuKumar56/FluxPort/issues).
+2. If not, open a new issue using the **Bug Report** template.
+3. Be as descriptive as possible (include screenshots and environment details).
+
+---
+
+## 📝 Pull Request Process
+1. Ensure your code follows the existing style guidelines.
+2. Link your PR to the issue it resolves (e.g., `Closes #123`).
+3. Add tests for new functionality.
+4. Your PR must pass all CI/CD checks before it will be reviewed.
+
+---
+
+## 📜 Code of Conduct
+By participating, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+Happy coding! 🚀
