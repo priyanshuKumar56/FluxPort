@@ -75,8 +75,18 @@ The application uses the following PostgreSQL tables:
 - Real-time API logs
 - Dashboard with analytics
 
+## Quality Assurance
+
+- **Linting**: Run `npm run lint` for frontend and backend validation.
+- **Testing**: Run `npm run test` for sanity checks across both stacks.
+- **Formatting**: Automatic formatting via Prettier.
+- **Git Hooks**: Pre-commit hooks via Husky enforce code quality standards before pushing.
+- **CI/CD**: GitHub Actions integrated for continuous integration and automated deployments.
+
 ## Development
 
 - Backend runs on `http://localhost:3001`
 - Frontend runs on `http://localhost:3000`
 
+---
+*Created with ❤️ for the open source community.*

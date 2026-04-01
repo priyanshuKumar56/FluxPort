@@ -1,0 +1,43 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy-frontend-vercel:
+    runs-on: ubuntu-latest
+    if: false # Disable by default since Vercel/Render Auto-deploy from Git
+    # Remove 'if: false' if you want GitHub Actions to manage deployment
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npm install -g vercel
+          vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+          vercel build --prod --token=$VERCEL_TOKEN
+          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+
+  deploy-backend-render:
+    runs-on: ubuntu-latest
+    if: false # Disable by default since Render Auto-deploy from Git
+
+    steps:
+      - name: Trigger Render Deploy Hook
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "Render Deploy Hook secret is not set!"
+            exit 1
+          fi
+          curl -X POST $RENDER_DEPLOY_HOOK
