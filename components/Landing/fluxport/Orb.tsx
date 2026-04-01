@@ -36,12 +36,13 @@ export function Orb({
   return (
     <div
       ref={ref}
-      className="absolute pointer-events-none rounded-full"
+      className="absolute pointer-events-none rounded-full will-change-transform"
       style={{
         width: size,
         height: size,
         filter: "blur(62px)",
         background: `radial-gradient(circle, ${color} 0%, transparent 68%)`,
+        transform: "translate3d(0,0,0)",
         ...style,
       }}
     />

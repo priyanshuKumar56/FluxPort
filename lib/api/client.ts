@@ -1,5 +1,7 @@
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://fluxport.onrender.com/api";
+  (typeof window === "undefined"
+    ? process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL
+    : process.env.NEXT_PUBLIC_API_URL) || "http://localhost:3001/api";
 
 class ApiClient {
   private baseUrl: string;

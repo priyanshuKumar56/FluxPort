@@ -63,9 +63,18 @@ export function FluxPortLanding() {
   const heroRef = useRef<HTMLElement>(null);
   const heroInnerRef = useRef<HTMLDivElement>(null);
 
-  // Navbar scroll state
+  // Navbar scroll state (Throttled for performance)
   useEffect(() => {
-    const h = () => setScrolled(window.scrollY > 50);
+    let ticking = false;
+    const h = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setScrolled(window.scrollY > 50);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
     window.addEventListener("scroll", h, { passive: true });
     return () => window.removeEventListener("scroll", h);
   }, []);
@@ -350,16 +359,22 @@ export function FluxPortLanding() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            {["Features", "How It Works", "Roadmap", "Security"].map((item) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase().replace(/ /g, "-")}`}
-                className="text-[13px] text-white/45 hover:text-white transition-colors tracking-wide relative group"
-              >
-                {item}
-                <span className="absolute -bottom-0.5 left-0 right-0 h-px bg-indigo-400 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
-              </a>
-            ))}
+            <Link href="/docs" className="text-[13px] text-white/45 hover:text-white transition-colors tracking-wide relative group">
+              Documentation
+              <span className="absolute -bottom-0.5 left-0 right-0 h-px bg-indigo-400 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
+            </Link>
+            <Link href="/docs/how-it-works" className="text-[13px] text-white/45 hover:text-white transition-colors tracking-wide relative group">
+              How It Works
+              <span className="absolute -bottom-0.5 left-0 right-0 h-px bg-indigo-400 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
+            </Link>
+            <Link href="/docs/roadmap" className="text-[13px] text-white/45 hover:text-white transition-colors tracking-wide relative group">
+              Roadmap
+              <span className="absolute -bottom-0.5 left-0 right-0 h-px bg-indigo-400 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
+            </Link>
+            <Link href="/docs/security" className="text-[13px] text-white/45 hover:text-white transition-colors tracking-wide relative group">
+              Security
+              <span className="absolute -bottom-0.5 left-0 right-0 h-px bg-indigo-400 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
+            </Link>
           </div>
 
           <div className="flex items-center gap-3">
@@ -960,11 +975,9 @@ export function FluxPortLanding() {
               <span className="text-white/16 text-[12px]">Designed for the next generation of engineers.</span>
             </div>
             <div className="flex items-center gap-8">
-              {["Documentation", "GitHub", "Privacy Policy"].map((link) => (
-                <a key={link} href="#" className="text-[12px] text-white/22 hover:text-white/55 transition-colors">
-                  {link}
-                </a>
-              ))}
+              <Link href="/docs" className="text-[12px] text-white/22 hover:text-white/55 transition-colors">Documentation</Link>
+              <Link href="https://github.com/priyanshuKumar56/FluxPort" className="text-[12px] text-white/22 hover:text-white/55 transition-colors">GitHub</Link>
+              <Link href="/docs/security" className="text-[12px] text-white/22 hover:text-white/55 transition-colors">Privacy Policy</Link>
             </div>
             <p className="text-[11px] text-white/14">© 2025 FluxPort Architecture. All rights reserved.</p>
           </div>
