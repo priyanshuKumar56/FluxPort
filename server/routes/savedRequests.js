@@ -39,7 +39,7 @@ router.get("/collection/:collectionId", authenticateToken, async (req, res) => {
 // Create saved request
 router.post("/", authenticateToken, async (req, res) => {
   try {
-    const { name, method, url, collectionId, folderId, headers, body } =
+    const { name, method, url, collectionId, folderId, headers, body, params, auth } =
       req.body;
     if (!name || !method || !url || !collectionId) {
       return res
@@ -86,7 +86,7 @@ router.post("/", authenticateToken, async (req, res) => {
 router.put("/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, method, url, folderId, headers, body } = req.body;
+    const { name, method, url, folderId, headers, body, params, auth } = req.body;
 
     // Verify request access
     const requestCheck = await pool.query(
